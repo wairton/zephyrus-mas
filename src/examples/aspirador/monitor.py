@@ -1,4 +1,5 @@
 #-*-coding:utf-8-*-
+#This work is under LGPL license, see the LICENSE.LGPL file for further details.
 import sys
 import time
 from math import log
@@ -25,7 +26,6 @@ class MonitorAspirador(Monitor):
     
     def pronto(self):
         while True:
-            #print 'interação esperando...'
             msgTestador = self.socketReceive.recv().split()
             if msgTestador[0] == "###":
                 for pid in self.participantes.keys():
@@ -47,20 +47,16 @@ class MonitorAspirador(Monitor):
             self.socketsParticipantes[pid].send("@@@")
         while True:
             mmsg = self.socketReceive.recv()
-            #print 'Interação recebeu', mmsg, time.time()
             msg = mmsg.split()
             de, para, texto = int(msg[0]), int(msg[1]), msg[2:] #NOTE: o último elemento NÃO é uma string
             self._log.append((de,para,texto))
             if para == -1:
                 self.avaliar(1, resolucao, ncargas, nsujeiras)
                 break
-            #socketsParticipantes[para].send("%s %s" % (de, texto[0]))
             self.socketsParticipantes[para].send(mmsg)
 
 
     def avaliar(self, agid, resolucao=None, ncargas = None, nsujeiras = None):
-        #print 'avaliando log', len(self._log), 
-        #print 'avaliando ', resolucao, ncargas
         nmovimentos = 0
         nrecolhidos = 0
         consumo = 0
@@ -78,7 +74,7 @@ class MonitorAspirador(Monitor):
                 if consumo > consumoMax:
                     consumoMax = consumo
                     
-        fatorx = nrecolhidos / float(nsujeiras) #=)
+        fatorx = nrecolhidos / float(nsujeiras)
         
         tamanho = 0.0
         if resolucao == None:
@@ -124,7 +120,6 @@ class MonitorAspirador(Monitor):
         """
         participante -> tupla contendo referência ao agente e o seu apelido.
         """
-        #print 'adcionou participante', pid, 'em', endereco
         self.participantes[pid] = endereco
         
             
@@ -137,5 +132,4 @@ if __name__ == '__main__':
     m = MonitorAspirador(*sys.argv[1:])
     m.adicionarParticipante(0, m.enderecos.endereco('ambiente'))
     m.adicionarParticipante(1, m.enderecos.endereco('agente'))
-    #TODO:adicionar os participantes
     m.start()

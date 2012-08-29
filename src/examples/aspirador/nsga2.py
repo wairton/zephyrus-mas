@@ -1,5 +1,7 @@
 #! /usr/bin/python
 #-*-coding:utf-8-*-
+#This work is under LGPL license, see the LICENSE.LGPL file for further details.
+
 import math
 import time
 import sys
@@ -68,8 +70,6 @@ class SolucaoAspirador(Solucao):
         clone.cromossomo = self.cromossomo[:]
         clone.objetivos = self.objetivos[:]
         clone.tipo = self.tipo
-        #clone.dominadas = self.dominadas[:]
-        #clone.ndominam = self.ndominam
         clone.distancia = self.distancia
         clone.fitness = self.fitness
         clone.cloned = True
@@ -134,7 +134,6 @@ class SolucaoAspirador(Solucao):
 
     def reproduzir(self, outro, crossoverProb, mutacaoProb, resolucao, nsujeira, nlixeira, ncarga, nagente):
         novoIndividuo = self.crossover(outro, crossoverProb, resolucao, nsujeira, nlixeira, ncarga, nagente)
-        #print novoIndividuo
         ocorreuMutacao = novoIndividuo.mutacao(mutacaoProb)
         if ocorreuMutacao:
             novoIndividuo.objetivos = None
@@ -201,8 +200,10 @@ class Nsga2(Process):
     def run(self):
         raise NotImplementedError
 
-    #retorna uma lista de frontes
     def fastNondominatedSort(self, populacao):
+        """
+        returns a list of fronts.
+        """
         frontes = []
         fronteAtual = []
         for individuo in populacao:
