@@ -9,7 +9,6 @@ import tkMessageBox as tkmessage
 
 import zmq
 
-#from inputDialog import InputDialog
 from connection import getIp
 from foo import prepareConfiguration
 
@@ -18,76 +17,71 @@ common_config = {
 }
 
 class Build(object):
+	numAgents = 0
+
 	def __init__(self, master):
 		self.frmDirectory = tk.Frame(master, borderwidth=2, **common_config)
 		self.buildDirectoryConfig(self.frmDirectory)
 		self.frmDirectory.pack(fill=tk.X, expand=True)
-
+		#port configuration
 		self.frmPort = tk.Frame(master, borderwidth=2, **common_config)
 		self.buildPortConfig(self.frmPort)
 		self.frmPort.pack(fill=tk.X, expand=True)
-
+		#agent buttons
+		self.frmAgentsControl = tk.Frame(master, borderwidth=2, **common_config)
+		self.buildAgentsControl(self.frmAgentsControl)
+		self.frmAgentsControl.pack(fill=tk.X, expand=True)
+		#agents info 
 		self.frmAgents = tk.Frame(master, borderwidth=2, **common_config)
-#		self.buildModes(self.frmMode)
 		self.buildAgentsConfig(self.frmAgents)
 		self.frmAgents.pack(fill=tk.X, expand=True)
-
-#		self.frmMode1 = tk.Frame(master, borderwidth=2, relief=tk.GROOVE)
+		#other participants info
 		self.frmMode1 = tk.Frame(master, borderwidth=2, **common_config)
-#		self.buildModes(self.frmMode)
 		self.buildAssistantsOpt2(self.frmMode1)
 		self.frmMode1.pack(fill=tk.X, expand=True)
-		
-#		self.frmLog = tk.Frame(master, borderwidth=2, relief=tk.GROOVE)
-#		self.buildLog(self.frmLog)
-#		self.frmLog.pack(fill=tk.X, expand=True)
-		
-#		self.frmControl = tk.Frame(master, borderwidth=2, relief=tk.GROOVE)
+		#control buttons
 		self.frmControl = tk.Frame(master, borderwidth=2, **common_config)
 		self.buildControl(self.frmControl)
 		self.frmControl.pack(fill=tk.X, expand=True)
-		
 	
 	def buildDirectoryConfig(self, master):
+		#label
 		self.lblBaseDirectory = tk.Label(master, text="diretório base: ", **common_config)
 		self.lblBaseDirectory.grid(row=0, column=0, sticky=tk.E, padx=2)
-		
+		#entry
 		self.strBaseDirectory = tk.StringVar()
 		self.entBaseDirectory = tk.Entry(master)
 		self.entBaseDirectory.config(width=50, justify=tk.CENTER) 
 		self.entBaseDirectory.config(textvariable=self.strBaseDirectory)
 		self.entBaseDirectory.grid(row=0, column=1, sticky=tk.W, padx=2)	
 		self.strBaseDirectory.set('/'.join(os.getcwd().split('/')[:-1] + ['examples']))
-		
+		#button
 		self.btnBaseDirectory = tk.Button(master, text="...", **common_config)
 		self.btnBaseDirectory.grid(row=0, column=2, padx=2)
-		
+
 	def buildPortConfig(self, master):
 		self.lblPorts = tk.Label(master, text="portas->", **common_config)
 		self.lblPorts.grid(row=0, column=0, sticky=tk.E, padx=2)
-
-		tk.Label(master, text="       ", **common_config).grid(row=0, column=1, sticky=tk.E, padx=2)
-		
+		#just to add space (I know, it's ugly)
+		tk.Label(master, text=" " * 7, **common_config).grid(row=0, column=1, sticky=tk.E, padx=2)
+		#agent stuff
 		self.lblAgentsPorts = tk.Label(master, text="agentes:", **common_config)
 		self.lblAgentsPorts.grid(row=0, column=2, sticky=tk.E, padx=2)
-		
 		self.strAgentsPorts = tk.StringVar()
 		self.entAgentsPorts = tk.Entry(master)
 		self.entAgentsPorts.config(width=5, justify=tk.CENTER) 
 		self.entAgentsPorts.config(textvariable=self.strAgentsPorts)
 		self.entAgentsPorts.grid(row=0, column=3, sticky=tk.W, padx=2)	
-		
+		#monitor stuff
 		tk.Label(master, text="monitor:", **common_config).grid(row=0, column=4, sticky=tk.E, padx=2)
-		
 		self.strMonitorPort = tk.StringVar()
 		self.entMonitorPort = tk.Entry(master)
 		self.entMonitorPort.config(width=5, justify=tk.CENTER) 
 		self.entMonitorPort.config(textvariable=self.strMonitorPort)
 		self.entMonitorPort.grid(row=0, column=5, sticky=tk.W, padx=2)
 		self.strMonitorPort.set("")
-		
+		#strategy stuff
 		tk.Label(master, text="estratégia:", **common_config).grid(row=0, column=6, sticky=tk.E, padx=2)
-		
 		self.strStrategyPort = tk.StringVar()
 		self.entStrategyPort = tk.Entry(master)		
 		self.entStrategyPort.config(width=5, justify=tk.CENTER) 
@@ -95,93 +89,88 @@ class Build(object):
 		self.entStrategyPort.grid(row=0, column=7, sticky=tk.W, padx=2)	
 		self.strStrategyPort.set("")
 
+	def buildAgentsControl(self, master):
+		self.btnAddAgent = tk.Button(master, text="+ agente", **common_config)
+		self.btnAddAgent.grid(row=0, column=1)
+		self.btnRemAgent = tk.Button(master, text="- agente", **common_config)
+		self.btnRemAgent.grid(row=0, column=2)
+
 	def buildAgentsConfig(self, master):
-		self.btnAddAgent = tk.Button(master, text="Adicionar Agente", **common_config)
-		self.btnAddAgent.grid(row=0, column=0)
-		self.btnRemAgent = tk.Button(master, text="Remover Agente", **common_config)
-		self.btnRemAgent.grid(row=0, column=1)
-		self.nAgents = 0
 		self.agents = {}
 		for i in ['lbl', 'ent', 'str']:
 			self.agents[i] = []
-#		self.addAgent(master)
 	
 	def addAgent(self, master):
-		lbl = tk.Label(master, text="executar agente (" + str(self.nAgents + 1) + "):", **common_config)
+		lbl = tk.Label(master, text="executar agente (" + str(self.numAgents + 1) + "):", **common_config)
 		self.agents['lbl'].append(lbl)
-		self.agents['lbl'][-1].grid(row=self.nAgents + 1, column=0, sticky=tk.E, padx=2)
-		
+		self.agents['lbl'][-1].grid(row=self.numAgents + 1, column=0, sticky=tk.E, padx=2)
+		#entry stuff
 		self.agents['str'].append(tk.StringVar())
 		self.agents['ent'].append(tk.Entry(master))
 		self.agents['ent'][-1].config(width=50, justify=tk.CENTER) 
 		self.agents['ent'][-1].config(textvariable=self.agents['str'][-1])
-		self.agents['ent'][-1].grid(row=self.nAgents + 1, column=1, sticky=tk.W, padx=2)
+		self.agents['ent'][-1].grid(row=self.numAgents + 1, column=1, sticky=tk.W, padx=2)
 		self.agents['str'][-1].set("<MANUAL>")
-		
-		self.nAgents += 1
-#		print 'agents: ', self.agents, self.nAgents
+		#
+		self.numAgents += 1
 		
 	def remAgent(self, master):
-#		print self.nAgents
-		if self.nAgents < 1:
+		if self.numAgents < 1:
 			return False
 		self.agents['lbl'][-1].grid_forget()
 		self.agents['lbl'].pop()
-#		self.agents['lbl'][-1].grid(row=self.actualLine, column=0, sticky=tk.E, padx=2)
-#		self.agents['str'][-1].grid_forget()
 		self.agents['str'].pop()
 		self.agents['ent'][-1].grid_forget()
-		self.agents['ent'].pop()		
-		
-		self.nAgents -= 1	
+		self.agents['ent'].pop()
+		self.numAgents -= 1	
 
 	def buildAssistantsOpt2(self, master):
+		btn_config = {'width':50, 'justify':tk.CENTER}
+		#environ stuff
 		self.lblLaunchEnviron = tk.Label(master, text="executar ambiente: ", **common_config)
 		self.lblLaunchEnviron.grid(row=0, column=0, sticky=tk.E, padx=2)
 		self.strLaunchEnviron = tk.StringVar()
 		self.entLaunchEnviron = tk.Entry(master)		
-		self.entLaunchEnviron.config(width=50, justify=tk.CENTER) 
+		self.entLaunchEnviron.config(**btn_config)
 		self.entLaunchEnviron.config(textvariable=self.strLaunchEnviron)
 		self.entLaunchEnviron.grid(row=0, column=1, sticky=tk.W, padx=2)	
 		self.strLaunchEnviron.set("<MANUAL>")
-
+		#tester stuff
 		self.lblLaunchTester = tk.Label(master, text="executar testador: ", **common_config)
 		self.lblLaunchTester.grid(row=1, column=0, sticky=tk.E, padx=2)
 		self.strLaunchTester = tk.StringVar()
 		self.entLaunchTester = tk.Entry(master)
-		self.entLaunchTester.config(width=50, justify=tk.CENTER) 
+		self.entLaunchTester.config(**btn_config)
 		self.entLaunchTester.config(textvariable=self.strLaunchTester)
 		self.entLaunchTester.grid(row=1, column=1, sticky=tk.W, padx=2)
 		self.strLaunchTester.set("<MANUAL>")
-
+		#monitor stuff
 		self.lblLaunchMonitor = tk.Label(master, text="executar monitor: ", **common_config)
 		self.lblLaunchMonitor.grid(row=2, column=0, sticky=tk.E, padx=2)
 		self.strLaunchMonitor = tk.StringVar()
 		self.entLaunchMonitor = tk.Entry(master)
-		self.entLaunchMonitor.config(width=50, justify=tk.CENTER) 
+		self.entLaunchMonitor.config(**btn_config)
 		self.entLaunchMonitor.config(textvariable=self.strLaunchMonitor)
 		self.entLaunchMonitor.grid(row=2, column=1, sticky=tk.W, padx=2)	
 		self.strLaunchMonitor.set("<MANUAL>")
-
+		#strategy stuff
 		self.lblLaunchStrategy = tk.Label(master, text="executar estratégia: ", **common_config)
 		self.lblLaunchStrategy.grid(row=3, column=0, sticky=tk.E, padx=2)
 		self.strLaunchStrategy = tk.StringVar()
 		self.entLaunchStrategy = tk.Entry(master)
-		self.entLaunchStrategy.config(width=50, justify=tk.CENTER) 
+		self.entLaunchStrategy.config(**btn_config) 
 		self.entLaunchStrategy.config(textvariable=self.strLaunchStrategy)
 		self.entLaunchStrategy.grid(row=3, column=1, sticky=tk.W, padx=2)	
 		self.strLaunchStrategy.set("<MANUAL>")
 
-
 	def buildLoadConfiguration(self, master):
+		#configuration
 		self.btnLoadConf = tk.Button(master, text="Carregar Configuração...", **common_config)
-#		self.btnLoadConf.grid(row=0, column=0, sticky=tk.E)
 		self.btnLoadConf.grid(row=0, column=0)
-
+		#script
 		self.btnLoadScript = tk.Button(master, text="Carregar Roteiro...", **common_config)
-#		self.btnLoadScript.grid(row=0, column=1,sticky=tk.E)
 		self.btnLoadScript.grid(row=0, column=1)
-		
+		#configuration display
 		self.txtConfig = tk.Text(master)
 		self.txtConfig.config(height=10, yscrollcommand=True, **common_config)
 		self.txtConfig.grid(row=1, columnspan=2)
@@ -189,28 +178,25 @@ class Build(object):
 	def buildLog(self, master):
 		self.lblLog = tk.Label(master, text="log: ", **common_config)
 		self.lblLog.pack(anchor=tk.W)
-#		self.lblLog.config(state=tk.DISABLED)
-
+		#log display
 		self.txtLog = tk.Text(master)
 		self.txtLog.config(height=10, yscrollcommand=True, bg='#000000', fg='#fff')
 		self.txtLog.pack()
 		
 	def buildControl(self, master):
-		self.btnNew = tk.Button(master, text="Novo", **common_config)
-#		self.btnStart.config(state=tk.DISABLED)
-		self.btnNew.grid(row=0, column=1, sticky=tk.E, padx=2, pady=2)
-		
-		self.btnOpen = tk.Button(master, text="Abrir", **common_config)
-#		self.btnStop.config(state=tk.DISABLED)
-		self.btnOpen.grid(row=0, column=2, sticky=tk.E, padx=2, pady=2)
-		
-		self.btnSave = tk.Button(master, text="Salvar", **common_config)
-#		self.btnRestart.config(state=tk.DISABLED)
-		self.btnSave.grid(row=0, column=3, sticky=tk.E, padx=2, pady=2)
-		
-		self.btnExit = tk.Button(master, text="Sair", **common_config)
-#		self.btnExit.config(state=tk.DISABLED)
-		self.btnExit.grid(row=0, column=4, sticky=tk.E, padx=2, pady=2)	
+		grid_config = {'row':0, 'sticky':tk.E, 'padx':2, 'pady':2}
+		#new button
+		self.btnNew = tk.Button(master, text="Novo", width=6, **common_config)
+		self.btnNew.grid(column=1, **grid_config)
+		#open button
+		self.btnOpen = tk.Button(master, text="Abrir", width=6, **common_config)
+		self.btnOpen.grid(column=2, **grid_config)
+		#save button
+		self.btnSave = tk.Button(master, text="Salvar", width=6, **common_config)
+		self.btnSave.grid(column=3, **grid_config)
+		#exit button
+		self.btnExit = tk.Button(master, text="Sair", width=6, **common_config)
+		self.btnExit.grid(column=4, **grid_config)
 		
 	def cleanFields(self):
 		self.strBaseDirectory.set('/'.join(os.getcwd().split('/')[:-1] + ['examples']))
@@ -219,7 +205,7 @@ class Build(object):
 		self.strAgentsPorts.set("")
 		for stringVar in self.agents['str']:
 			stringVar.set("<MANUAL>")
-		while self.nAgents > 1:
+		while self.numAgents > 1:
 			self.remAgent(None)
 		self.strLaunchEnviron.set("<MANUAL>")
 		self.strLaunchTester.set("<MANUAL>")
@@ -274,7 +260,7 @@ class Actions(Build):
 		configuration['tester'] = self.strLaunchTester.get()
 		configuration['monitor'] = self.strLaunchMonitor.get()
 		configuration['strategy'] = self.strLaunchStrategy.get()
-        #FIXME: incompleto!
+		#FIXME: incompleto!
 		#prepareConfiguration(configuration)
 		return configuration
 	
@@ -293,7 +279,7 @@ class Actions(Build):
 		
 	def quit(self):
 		self.master.destroy()
-	
+
 
 class Events(Actions):
 	def __init__(self, master):
