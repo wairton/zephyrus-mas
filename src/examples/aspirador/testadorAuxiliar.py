@@ -19,12 +19,37 @@ class TestadorAuxiliarAspirador(Process):
         
     def run(self):
         self.conectarComPrincipal()
+        self.inicializarParticipantes()
+        self.socketMonitor.connect(self.enderecos.endereco('monitor'))
+        self.socketConfiguracoes = contexto.socket(zmq.PUB)
+        self.socketConfiguracoes.bind(self.enderecos.endereco('testador_par'))
         
     def inicializarParticipantes(self):
-        subp.Popen("") #estratégia
-        subp.Popen("") #monitor
-        subp.Popen("") #ambiente
-        subp.Popen("") #agentes
+        if not '<MANUAL>' in self.configs['exe']['monitor']: #monitor
+            subp.Popen(self.configs['exe']['monitor'].split())
+        else:
+            endereco = self.enderecos.endereco('monitor')
+            print 'execute o monitor manualmente, esperado em: ', endereco
+            raw_input('\npressione enter para continuar')
+        if not '<MANUAL>' in self.configs['exe']['ambiente']: #ambiente
+            subp.Popen(self.configs['exe']['ambiente'].split())
+        else:
+            endereco = self.enderecos.endereco('ambiente')
+            print 'execute o ambiente manualmente, esperado em: ', endereco
+            raw_input('\npressione enter para continuar')
+        for i, agente in enumerate(self.configs['exe']['agentes']): #agentes
+            if not '<MANUAL>' in agente:
+                subp.Popen(agente.split())
+            else:
+                endereco = self.enderecos.endereco('agente')
+                print 'execute o agente manualmente, esperado em: ', endereco
+                raw_input('\npressione enter para continuar')                
+        if not '<MANUAL>' in self.configs['exe']['estrategia']: #estratégia
+            subp.Popen(self.configs['exe']['estrategia'].split())
+        else:
+            endereco = self.enderecos.endereco('estrategia')
+            print 'execute o estratégia manualmente, esperado em: ', endereco
+            raw_input('\npressione enter para continuar')
 
     def prepararSimulacao(self):
         #TODO: este método funciona APENAS para o agente aspirador!
@@ -82,9 +107,7 @@ class TestadorAuxiliarAspirador(Process):
         self.ambiente.start()
         sleep(0.2)
         [ag.start() for ag in self.agentes]
-
         self.conectarComPrincipal()
-
         self.avaliar()
 
     def conectarComPrincipal(self):
@@ -111,5 +134,5 @@ class TestadorAuxiliarAspirador(Process):
         self.socketConfigure = contexto.socket(zmq.PUB)
 
 if __name__ == '__main__':
-    t = TestadorAuxiliar()
+    t = TestadorAuxiliar(*sys.argv[1:])
     t.start()

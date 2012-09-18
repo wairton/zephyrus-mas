@@ -14,10 +14,10 @@ import subprocess as subp
 
 from core.componentes import Componentes
 from core.enderecos import Enderecos
+from core.exceptions import CoreException
 
 import json
 import zmq
-
 
 class TestadorAspirador(Process):
     def __init__(self, configSim, configExe, configEnd, configComp):
@@ -41,8 +41,11 @@ class TestadorAspirador(Process):
             self.socketMonitor.connect(self.enderecos.endereco('monitor'))
             self.socketConfiguracoes = contexto.socket(zmq.PUB)
             self.socketConfiguracoes.bind(self.enderecos.endereco('testador_par'))
+        elif modo == 'dist':
+            self.incializarParticipantesDistribuido()
+            #...
         else:
-            pass #TODO: implementar caso com vários testadores
+            raise CoreException("Modo de funcionamento desconhecido: %s" % modo)
         self.socketEstrategia = contexto.socket(zmq.PUSH)
         self.socketEstrategia.connect(self.enderecos.endereco('estrategia'))
         self.loopPrincipal(modo)
