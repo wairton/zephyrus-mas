@@ -43,8 +43,3 @@ class Roteiro(list):
     def listItems(self):
         for i in self:
             print i
-    
-    
-    
-    
-    

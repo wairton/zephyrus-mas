@@ -5,4 +5,4 @@
 from gui.principalGUI import Zephyrus
 
 if __name__ == '__main__':
-	Zephyrus()
+    Zephyrus()
