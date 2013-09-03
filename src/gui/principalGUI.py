@@ -14,20 +14,25 @@ from connection import getIp
 #from core.Roteiro import Roteiro
 #from core.Tes
 
+#common_config = {
+#    'bg' : '#e6e6e6',
+#    'borderwidth' : 2
+#}
+
 common_config = {
-    'bg' : '#e6e6e6',
-    'borderwidth' : 2
+    'borderwidth' : 1
 }
 
 class Build(object):
     def __init__(self, master):
         self.frmMode = tk.Frame(master, **common_config)
+        self.buidMenu(master)
         self.buildModes(self.frmMode)
-        self.buildAssistantsOpt(self.frmMode)
+        #self.buildAssistantsOpt(self.frmMode)
         self.frmMode.pack(fill=tk.X, expand=True)
 
         self.frmConfig = tk.Frame(master, **common_config)
-        self.buildLoadConfiguration(self.frmConfig)
+        #self.buildLoadConfiguration(self.frmConfig)
         self.frmConfig.pack(fill=tk.X, expand=True)
 
         self.frmLog = tk.Frame(master, **common_config)
@@ -38,47 +43,52 @@ class Build(object):
         self.buildControl(self.frmControl)
         self.frmControl.pack(fill=tk.X, expand=True)
 
+    def buidMenu(self, master):
+        self.menubar = tk.Menu(master)
+        master.config(menu=self.menubar)
+
     def buildModes(self, master):
         self.modeOpt = tk.IntVar()
 
         self.optCentralized = tk.Radiobutton(master, **common_config)
         self.optCentralized.config(text="centralizado", variable=self.modeOpt, value=1)
 #       self.optCentralized.grid(row=0, column=0, sticky=tk.E, padx=2)
-        self.optCentralized.grid(row=0, column=0, padx=2)
+        self.optCentralized.grid(row=0, column=0, sticky=tk.W)
 
         self.optDistributed = tk.Radiobutton(master, **common_config)
         self.optDistributed.config(text="distribuído", variable=self.modeOpt, value=2)
 #       self.optDistributed.grid(row=0, column=1, sticky=tk.E, padx=2)
-        self.optDistributed.grid(row=0, column=4)
+        self.optDistributed.grid(row=0, column=1, sticky=tk.W)
 
         self.modeOpt.set(1)
 
-    def buildAssistantsOpt(self, master):
-        self.lblAssistants = tk.Label(master, text="número de auxiliares: ", **common_config)
+    #def buildAssistantsOpt(self, master):
+        self.lblAssistants = tk.Label(master, text="auxiliares: ", **common_config)
         self.lblAssistants.config(state=tk.DISABLED)
-        self.lblAssistants.grid(row=1, column=0, sticky=tk.E, padx=2)
+        self.lblAssistants.grid(row=0, column=2, sticky=tk.E)
 
         self.numAssistants = tk.StringVar()
         self.entNumAssistants = tk.Entry(master, **common_config)
         self.entNumAssistants.config(state=tk.DISABLED, width=5, justify=tk.CENTER)
         self.entNumAssistants.config(textvariable=self.numAssistants)
-        self.entNumAssistants.grid(row=1, column=1, sticky=tk.W, padx=2)
+        self.entNumAssistants.grid(row=0, column=3, sticky=tk.W, padx=2)
         self.numAssistants.set("0")
 
-        self.lblConnectPort = tk.Label(master, text="porta de espera: ", **common_config)
+        self.lblConnectPort = tk.Label(master, text="porta: ", **common_config)
         self.lblConnectPort.config(state=tk.DISABLED)
-        self.lblConnectPort.grid(row=1, column=2, sticky=tk.W, padx=2)
+        self.lblConnectPort.grid(row=0, column=4, sticky=tk.W, padx=2)
 
         self.connectPort = tk.StringVar()
         self.entConnectPort = tk.Entry(master)
         self.entConnectPort.config(state=tk.DISABLED, width=5, justify=tk.CENTER)
         self.entConnectPort.config(textvariable=self.connectPort)
-        self.entConnectPort.grid(row=1, column=3, sticky=tk.W, padx=2)
+        self.entConnectPort.grid(row=0, column=5, sticky=tk.W, padx=2)
         self.connectPort.set("7000")
 
         self.btnAssitants = tk.Button(master, text="Conectar", **common_config)
         self.btnAssitants.config(state=tk.DISABLED)
-        self.btnAssitants.grid(row=1, column=4, sticky=tk.E, padx=25)
+        #self.btnAssitants.grid(row=1, column=5, sticky=tk.E, padx=25)
+        self.btnAssitants.grid(row=0, column=6, sticky=tk.E)
 
     def buildLoadConfiguration(self, master):
         self.btnLoadConf = tk.Button(master, text="Configuração...", width=10, **common_config)
@@ -92,7 +102,7 @@ class Build(object):
 
         self.scrLog = tk.Scrollbar(master)
         self.txtLog = tk.Text(master)
-        self.txtLog.config(height=20, yscrollcommand=True, bg='#000000', fg='#fff')
+        self.txtLog.config(height=10, yscrollcommand=True, bg='#000000', fg='#fff')
         self.txtLog.pack(side=tk.LEFT)
         self.scrLog.pack(side=tk.RIGHT, fill=tk.Y)
         self.scrLog.config(command=self.txtLog.yview)
@@ -100,9 +110,11 @@ class Build(object):
     def buildControl(self, master):
         #start button
         self.btnStart = tk.Button(master, text="Start", width=8, **common_config)
+        #self.btnStart.pack(side=tk.BOTTOM)
         self.btnStart.grid(row=0, column=1, sticky=tk.E, padx=2, pady=2)
         #stop button
         self.btnStop = tk.Button(master, text="Stop", width=8, **common_config)
+        #self.btnStop.pack(side=tk.LEFT)
         self.btnStop.grid(row=0, column=2, sticky=tk.E, padx=2, pady=2)
         #restart button
         self.btnRestart = tk.Button(master, text="Restart", width=8, **common_config)
@@ -230,8 +242,13 @@ class Events(Actions):
         self.btnAssitants.bind("<Return>", self.clickConnect)
         self.btnAssitants.bind("<space>", self.clickConnect)
 
-        self.btnLoadConf.config(command=self.loadConfiguration)
-        self.btnLoadScript.config(command=self.loadScript)
+
+        filemenu = tk.Menu(self.menubar, tearoff=0)
+        filemenu.add_command(label="Configuração...", command=self.loadConfiguration)
+        filemenu.add_command(label="Roteiro...", command=self.loadScript)
+        self.menubar.add_cascade(label="Carregar", menu=filemenu)
+        #self.btnLoadConf.config(command=self.loadConfiguration)
+        #self.btnLoadScript.config(command=self.loadScript)
 
         self.btnExit.bind("<Button-1>", self.clickExit)
         self.btnExit.bind("<space>", self.clickExit)
