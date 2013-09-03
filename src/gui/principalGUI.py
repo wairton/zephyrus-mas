@@ -205,6 +205,15 @@ class Actions(Build):
     def quit(self):
         self.master.destroy()
 
+    def start(self):
+        print "run baby run!"
+
+    def stop(self):
+        print "TODO: implement stop action"
+
+    def restart(self):
+        print "TODO: implement restart action"
+
 
 class Events(Actions):
     def __init__(self, master):
@@ -228,8 +237,26 @@ class Events(Actions):
         self.btnExit.bind("<space>", self.clickExit)
         self.btnExit.bind("<Return>", self.clickExit)
 
+        self.btnStart.bind("<Button-1>", self.clickStart)
+        self.btnStart.bind("<Return>", self.clickStart)
+
+        self.btnStop.bind("<Button-1>", self.clickStop)
+        self.btnStop.bind("<Return>", self.clickStop)
+
+        self.btnRestart.bind("<Button-1>", self.clickRestart)
+        self.btnRestart.bind("<Return>", self.clickRestart)
+
     def clickConnect(self, event):
         self.connect(event)
+
+    def clickStart(self, event):
+        self.start()
+
+    def clickStop(self, event):
+        self.stop()
+
+    def clickRestart(self, event):
+        self.restart()
 
     def clickCentralized(self, event):
         self.lblAssistants.config(state=tk.DISABLED)
@@ -261,7 +288,7 @@ class Zephyrus(Events):
         super(Zephyrus, self).__init__(self.master)
         #TODO: mover essa mensagem
         self.txtLog.insert(tk.END, "*" * 24)
-        self.txtLog.insert(tk.END, " ZEPHYRUS - version 0.1 - 2012 ")
+        self.txtLog.insert(tk.END, " ZEPHYRUS - version 0.1.1 - 2013 ")
         self.txtLog.insert(tk.END, "*" * 24 + '\n')
         self.txtLog.config(state="disabled")
 
