@@ -1,8 +1,34 @@
-simulacao sim tcp://127.0.0.1:7000
-estrategia est tcp://127.0.0.1:5000
-testador tes tcp://127.0.0.1:6600
-testador_par tes tcp://127.0.0.1:6601
-testador_est tes tcp://127.0.0.1:6605
-monitor mon tcp://127.0.0.1:6500
-ambiente amb tcp://127.0.0.1:6000
-agente ag1 tcp://127.0.0.1:6001
+{
+  "simulation": {
+    "alias": "sim",
+    "address": "tcp://127.0.0.1:7000"
+  },
+  "strategy": {
+    "alias": "str",
+    "address": "tcp://127.0.0.1:5000"
+  },
+  "tester": {
+    "alias": "tes",
+    "address": "tcp://127.0.0.1:6600"
+  },
+  "tester_par": {
+    "alias": "tes",
+    "address": "tcp://127.0.0.1:6601"
+  },
+  "tester_est": {
+    "alias": "tes",
+    "address": "tcp://127.0.0.1:6605"
+  },
+  "monitor": {
+    "alias": "mon",
+    "address": "tcp://127.0.0.1:6500"
+  },
+  "environment": {
+    "alias": "env",
+    "address": "tcp://127.0.0.1:6000"
+  },
+  "agent": {
+    "alias": "ag1",
+    "address": "tcp://127.0.0.1:6001"
+  }
+}
