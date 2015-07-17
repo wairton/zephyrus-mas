@@ -4,6 +4,7 @@
 
 import time
 import sys
+import pprint
 
 import zmq
 
@@ -13,20 +14,21 @@ from core.ambiente import Ambiente
 class AmbienteAspirador(Ambiente):
     def __init__(self, mid, configEnd, configCom):
         super(AmbienteAspirador, self).__init__(mid, configEnd, configCom)
-    
+
     def run(self):
-        print 'Ambiente rodando!!!', time.time()
         contexto = zmq.Context()
         self.socketReceive = contexto.socket(zmq.PULL)
-        
-        self.socketReceive.bind(self.enderecos.endereco('ambiente'))
+
+        self.socketReceive.bind(self.enderecos.endereco('environment'))
         self.socketSend = contexto.socket(zmq.PUSH)
         self.socketSend.connect(self.enderecos.endereco('monitor'))
         self.socketTestador = contexto.socket(zmq.SUB)
-        self.socketTestador.connect(self.enderecos.endereco('testador_par'))
-        self.socketTestador.setsockopt(zmq.SUBSCRIBE, self.enderecos.get('ambiente')[0])
+        self.socketTestador.connect(self.enderecos.endereco('tester_par'))
+        pprint.pprint(self.enderecos.get('environment'))
+        self.socketTestador.setsockopt(zmq.SUBSCRIBE, str(self.enderecos.get('environment')['alias']))
+        print 'Ambiente rodando!!!', time.time()
         self.mainLoop()
-        
+
     def mainLoop(self):
         print "Ambiente está pronto (%s)" % (self.id)
         while True:
@@ -60,8 +62,8 @@ class AmbienteAspirador(Ambiente):
                             self.socketSend.send(msg)
                             msg = "%s %s %s" % (self.id, -1, "###")
                             self.socketSend.send(msg)
-                            self.reiniciarMemoria()                            
-                            break                                    
+                            self.reiniciarMemoria()
+                            break
                         #TODO: como o ambiente para?
                     else:
                         raise "ambiente: recebeu mensagem desconhecida"
@@ -73,23 +75,23 @@ class AmbienteAspirador(Ambiente):
                 break
             else:
                 pass
-    
+
     def reiniciarMemoria(self):
         self.estrutura = []
         self.posAgentes = {}
-        
+
     def reconstruir(self, novaEstrutura, resolucao):
         nlinhas = ncolunas = resolucao
         for i in xrange(nlinhas):
             de, ate = ncolunas * i, ncolunas * (i+1)
             self.estrutura.append(novaEstrutura[de:ate])
         self.nlinhas, self.ncolunas = nlinhas, ncolunas
-        
+
     def adicionarAgente (self, idAgente, x, y):
         #TODO: checar se a posicao do agente é válida
         self.posAgentes[idAgente]  = (x, y)
         self.estrutura[x][y] = self.componentes.adicionarVarios(['AG03','AG'], self.estrutura[x][y])
-    
+
     def mover (self, iden, direcao):
         if direcao < 0 or direcao > 3:
             #TODO: notificar passagem de valor inválido.
@@ -120,10 +122,10 @@ class AmbienteAspirador(Ambiente):
                     return "colidiu"
                 self.posAgentes[iden] = x,y-1
                 self.estrutura[x][y-1] = self.componentes.adicionar('AG', self.estrutura[x][y-1])
-                
+
             self.estrutura[x][y] = self.componentes.remover('AG',self.estrutura[x][y])
             return "moveu"
-        
+
     def limpar (self, iden):
         x, y = self.posAgentes[iden]
         if self.componentes.checar('LIXO', self.estrutura[x][y]):
@@ -131,30 +133,30 @@ class AmbienteAspirador(Ambiente):
             return "limpou"
         else:
             return 'nop'
-    
+
     def checar(self, iden):
         x, y = self.posAgentes[iden]
         return self.estrutura[x][y]
-            
+
     def recarregar(self, agid):
         x, y = self.posAgentes[agid]
         if self.componentes.checar('RECARGA', self.estrutura[x][y]):
             return "recarregou"
         else:
             return "nop"
-    
+
     def depositar(self, agid):
         ""
-        x, y = self.posAgentes[agid]        
+        x, y = self.posAgentes[agid]
         if self.componentes.checar('LIXEIRA', self.estrutura[x][y]):
             return "depositou"
         else:
             return "nop"
-        
+
     def parar(self,agid):
         del self.posAgentes[agid]
         return "parou"
-        
+
     def draw(self):
         ret = ""
         for linha in self.estrutura:
@@ -177,7 +179,7 @@ class AmbienteAspirador(Ambiente):
             ret += '\n'
         ret += '\n'
         return ret
-        
+
     def drawFile(self, filename, mode):
         log = open(filename, mode)
         for linha in self.estrutura:

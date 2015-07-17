@@ -28,11 +28,7 @@ class Enderecos(object):
         return None
 
     def endereco(self, participante):
-        try:
-            endereco = self.addresses.get(participante)[1]
-        except:
-            return None
-        return endereco
+        return self.addresses.get(participante,{}).get('address')
 
     def get(self, participante):
         return self.addresses.get(participante)

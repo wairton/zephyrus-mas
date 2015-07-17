@@ -1,10 +1,10 @@
 #-*-coding:utf-8-*-
 #This work is under LGPL license, see the LICENSE.LGPL file for further details.
-
 from time import sleep, time, strftime, localtime
 from multiprocessing import Process
 import sys
 import random #for debug purpose only
+import pprint
 import time
 import os
 
@@ -27,14 +27,14 @@ class TestadorAspirador(Process):
         self.configs['exe'] = json.load(open(configExe))
         self.enderecos = Enderecos(configEnd)
         self.componentes = Componentes(configComp)
-        
+
     def run (self):
         print '*'*20, 'Zephyrus', '*'*20
         print 'conectando...'
         modo = self.configs['sim']['mode']
         contexto = zmq.Context()
         self.socketReceive = contexto.socket(zmq.PULL)
-        self.socketReceive.bind(self.enderecos.endereco('testador'))
+        self.socketReceive.bind(self.enderecos.endereco('tester'))
         if modo == 'cent': #um testador
             self.inicializarParticipantesCentralizado()
             self.socketMonitor = contexto.socket(zmq.PUSH)
@@ -61,10 +61,12 @@ class TestadorAspirador(Process):
             #endereco = self.configs['end']['monitor'].split(',')[-1]
             print 'execute o monitor manualmente, esperado em: ', endereco
             raw_input('\npressione enter para continuar')
-        if not '<MANUAL>' in self.configs['exe']['ambiente']: #ambiente
-            subp.Popen(self.configs['exe']['ambiente'].split())
+
+        pprint.pprint(self.configs)
+        if not '<MANUAL>' in self.configs['exe']['environment']: #ambiente
+            subp.Popen(self.configs['exe']['environment'].split())
         else:
-            endereco = self.enderecos.endereco('ambiente')
+            endereco = self.enderecos.endereco('environment')
             #endereco = self.configs['end']['ambiente'].split(',')[-1]
             print 'execute o ambiente manualmente, esperado em: ', endereco
             raw_input('\npressione enter para continuar')
@@ -75,7 +77,7 @@ class TestadorAspirador(Process):
                 endereco = self.enderecos.endereco('agente')
                 #endereco = self.configs['end']['agentes'][i].split(',')[-1]
                 print 'execute o agente manualmente, esperado em: ', endereco
-                raw_input('\npressione enter para continuar')                
+                raw_input('\npressione enter para continuar')
         if not '<MANUAL>' in self.configs['exe']['estrategia']: #estratégia
             subp.Popen(self.configs['exe']['estrategia'].split())
         else:
@@ -87,7 +89,7 @@ class TestadorAspirador(Process):
     def incializarParticipantesDistribuido(self):
         pass    #TODO!
 
-    
+
     def loopPrincipal(self, modo):
         self.socketEstrategia.send("@@@")
         self.cenarioPadrao = map(int, self.configs['sim']['cenarioPadrao'].split())
@@ -122,15 +124,15 @@ class TestadorAspirador(Process):
             #medias = "%s %s" % (100 * random.random(), 100 * random.random())
             self.socketEstrategia.send(medias)
             #print self.enderecos.get('ambiente')[0]
-            
+
     #        print 'recebi', msg
     #        for resultado in resultados:
     #            log.write(str(resultado))
     #        medias = sum(map(lambda k:k[0], resultados))/len(resultados), sum(map(lambda k:k[1], resultados))/len(resultados)
     #        self.socketEstrategia.send("%s %s" % (medias[0], medias[1]))
     #        return medias
-        
-    
+
+
     #TODO: expandir para uma versão com roteiro
     def iniciarSimulacao(self, modo):
         teste = self.socketReceive()
@@ -138,24 +140,24 @@ class TestadorAspirador(Process):
         tinicio = time()
         print 'Teste iniciado às: ', strftime("%H:%M:%S", localtime())
         #self.
-        
+
         self.configuracao = json.loads(open('configuracao.js').read())
         self.cenarioPadrao = map(int, self._configuracao["cenarioPadrao"].split())
         self.estrategia = self.estrategiaNsga2()
         populacao = self.estrategia.mainLoop()
         self.analise(populacao)
-        
+
         tfim  = time()
         print 'Teste finalizado às: ', strftime("%H:%M:%S", localtime())
         print "tempo consumido: ",  str(tfim - tinicio) + 's'
-    
-            
+
+
     def avaliarMultiplos(self, cenario):
         #print '@'
         ambiente = map(self.componentes.juntar, cenario, self.cenarioPadrao)
         #dimensao = self._configuracao["resolucao"]
         resultados = []
-        
+
         log = open(self._configuracao["mainlog"],'a')
         log.write('\n@\n')
         log.write(str(ambiente))
@@ -168,12 +170,12 @@ class TestadorAspirador(Process):
         for socket in self.socketAuxiliares:
             socket.send(msg)
             #socket.send(str(ambiente))
-        
+
         for i in xrange(self._configuracao["nauxiliares"]):
             msg = self.socketReceive.recv()
             resultados.append(map(float,msg.split()))
             #print 'recebi', msg
-            
+
         for resultado in resultados:
             log.write(str(resultado))
         log.write('\n')
@@ -182,7 +184,7 @@ class TestadorAspirador(Process):
         log.close()
         return medias
 
-        
+
     def analise(self, populacao):
         cenarios = []
         for i in populacao:

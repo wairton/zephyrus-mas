@@ -17,61 +17,61 @@ from core.enderecos import Enderecos
 class AspiradorIII(Process):
     def __init__(self, agId, configEnd, configCom):
         super(AspiradorIII, self).__init__()
-        
+
         self.mid = agId
         self.enderecos = Enderecos(configEnd)
         self.endereco = self.enderecos.endereco('agente')
         self.enderecoMonitor = self.enderecos.endereco('monitor')
         self.componentes  = Componentes(configCom)
-        
+
         self.socketReceive = None
         self.socketSend = None
-    
-        self.enviar = True #True se agente deve enviar mensagem, False caso esteja esperando resposta 
-        self.agindo = True #False para enviar ação de perceber          
+
+        self.enviar = True #True se agente deve enviar mensagem, False caso esteja esperando resposta
+        self.agindo = True #False para enviar ação de perceber
         self.ENERGIAMAX = 80.0
         self.limiteRecarga = 0.25
-                    
+
         self.RESERVATORIOMAX = 4
         self.PLANO_EXPLORAR = 0
         self.PLANO_RECARREGAR = 1
         self.PLANO_DEPOSITAR = 2
         self.PLANO_SUJEIRA = 3
-        self.tiposPlano = (self.PLANO_EXPLORAR, self.PLANO_RECARREGAR, self.PLANO_DEPOSITAR, self.PLANO_SUJEIRA)    
-        
+        self.tiposPlano = (self.PLANO_EXPLORAR, self.PLANO_RECARREGAR, self.PLANO_DEPOSITAR, self.PLANO_SUJEIRA)
+
         self.reiniciarMemoria()
-            
-        
+
+
     def perceber(self, percebido):
-        #define o momento em que o agente enxerga o ambiente captando informações sobre 
+        #define o momento em que o agente enxerga o ambiente captando informações sobre
         #existência de obstáculos e de sujeira.
-        
+
         itens = ['PAREDEN', 'PAREDEL', 'PAREDES', 'PAREDEO', 'LIXO', 'LIXEIRA','RECARGA']
         #posições: N, L, S ,O e 'sujo' (True indica presença de parede/sujeira).
-        st = map(lambda item:self.componentes.checar(item, percebido),itens)   
+        st = map(lambda item:self.componentes.checar(item, percebido),itens)
         return self.agir(st)
-        
+
     def reiniciarMemoria(self):
         self.visitados = {}
         self.nvisitados = []
         self.lixeiras = [] #posição de pontos de depósito de lixo
         self.recargas = [] #posição de pontos de recarga
         self.sujeiras = set() #posição de sujeiras encontradas
-                    
+
         self.x, self.y = 0, 0
         self.percebido = None
         self.px, self.py = 0, 0
         self.DELTA_POS = ((-1, 0), (0, 1), (1, 0), (0, -1)) #auxiliar em várias operações
         self.energia = self.ENERGIAMAX
-    
+
     #           self.limiteRecarga = 0.4
         self.reservatorio = 0
-    
+
         self.plano = None #qual tipo de plano atualmente sendo executado
         self.movimentar = [] #sequência de movimentos a serem realizados
         self.nrecargas = 0 #usada durante a execução do plano de recarga
         self.recuperarMovimento = 0 #armazena um movimento tentado para recuperá-lo em caso de falha.
-        
+
     def run(self):
         print 'Agente rodando!!!'
         contexto = zmq.Context()
@@ -79,10 +79,10 @@ class AspiradorIII(Process):
         self.socketReceive.bind(self.endereco)
         self.socketSend = contexto.socket(zmq.PUSH)
         self.socketSend.connect(self.enderecoMonitor)
-        self.pronto()     
-    
-    def pronto(self):
-        print "Agente %s está pronto." % (self.mid)
+        self.ready()
+
+    def ready(self):
+        print "Agent %s is ready." % (self.mid)
         while True:
             msg = self.socketReceive.recv()
             if msg == "@@@":
@@ -97,8 +97,8 @@ class AspiradorIII(Process):
                         else:
                             acao = self.perceber(self.percebido)
                             msg = "%s %s " % (self.mid, 0)
-                            #TODO: tratar o caso PARAR              
-                            self.socketSend.send(msg + acao)                                
+                            #TODO: tratar o caso PARAR
+                            self.socketSend.send(msg + acao)
                             self.enviar = False
                             pass
                     else:
@@ -125,16 +125,16 @@ class AspiradorIII(Process):
                             elif retorno == 'nop':
                                 self.nop()
                             else:
-                                pass    
+                                pass
                             self.enviar = True
-                            self.agindo = False 
+                            self.agindo = False
             elif msg == "###":
                 print "Agente %s recebeu mensagem de finalização de atividades." % (self.mid)
                 break
             else:
                 print "Agente %s recebeu mensagem inválida." % (self.mid)
-            
-    
+
+
     def agir(self, st):
         self.memorizarAmbiente(st)
         if self.energia <= 0:
@@ -148,7 +148,7 @@ class AspiradorIII(Process):
                         self.plano = None
                     return "mover %s" % self.recuperarMovimento
                 else:
-                    print 'erro na função agir' #TODO: transformar isso em execeção             
+                    print 'erro na função agir' #TODO: transformar isso em execeção
             elif self.plano == self.PLANO_DEPOSITAR:
                 if len(self.movimentar) > 0:
                     self.recuperarMovimento = self.movimentar.pop(0)
@@ -157,7 +157,7 @@ class AspiradorIII(Process):
                     return "mover %s" % self.recuperarMovimento
                 else:
                     self.plano = None
-                    return "depositar"                  
+                    return "depositar"
             elif self.plano == self.PLANO_RECARREGAR:
                 if len(self.movimentar) > 0:
                     self.recuperarMovimento = self.movimentar.pop(0)
@@ -177,10 +177,10 @@ class AspiradorIII(Process):
                     return "mover %s" % self.recuperarMovimento
                 else:
                     self.plano = None
-                    return "limpar"     
+                    return "limpar"
             else:
                 print "plano desconhecido" #TODO: transformar em exceção
-                
+
         elif (self.energia / self.ENERGIAMAX) < self.limiteRecarga:
             return self.tracarPlanoRecarga(st)
         elif self.reservatorio == self.RESERVATORIOMAX:
@@ -190,7 +190,7 @@ class AspiradorIII(Process):
             return  'limpar'
         else:
             return self.escolherDirecao(st[:4])
-    
+
     def memorizarAmbiente (self,st):
         if (self.x, self.y) in self.nvisitados:
             self.nvisitados.remove((self.x,self.y))
@@ -198,13 +198,13 @@ class AspiradorIII(Process):
         visitados = self.visitados.keys() #NOTE: tentativa de melhorar o desempenho, gerando a lista apenas uma vez
         if st[0] == False:
             if ((self.x-1, self.y) not in visitados) and ((self.x-1, self.y) not in self.nvisitados):
-                self.nvisitados.append((self.x-1, self.y))          
+                self.nvisitados.append((self.x-1, self.y))
         if st[1] == False:
             if ((self.x, self.y+1) not in visitados) and ((self.x, self.y+1) not in self.nvisitados):
-                self.nvisitados.append((self.x, self.y + 1))            
+                self.nvisitados.append((self.x, self.y + 1))
         if st[2] == False:
             if ((self.x+1, self.y) not in visitados) and ((self.x+1, self.y) not in self.nvisitados):
-                self.nvisitados.append((self.x + 1, self.y))            
+                self.nvisitados.append((self.x + 1, self.y))
         if st[3] == False:
             if ((self.x, self.y-1) not in visitados) and ((self.x, self.y-1) not in self.nvisitados):
                 self.nvisitados.append((self.x, self.y - 1))
@@ -214,25 +214,25 @@ class AspiradorIII(Process):
             self.lixeiras.append((self.x, self.y))
         if (st[6] == True) and  not ((self.x, self.y) in self.recargas):
             self.recargas.append((self.x, self.y))
-    
+
     #TODO: a checagem de colisão no ambiente NÃO funciona para colisão com paredes
     def escolherDirecao(self, paredes):
         direcoes = []
         for i, parede in enumerate(paredes):
             if not parede:
                 direcoes.append(i)
-                
+
         if len(direcoes) == 0:
             return 'parar'
-                    
+
         if len(self.nvisitados) == 0 and len(self.sujeiras) == 0:
             return 'parar'
-        
+
         nvisitados = []
         visitados = self.visitados.keys()
         for direcao in direcoes:
             if direcao == 0:
-                if ((self.x-1, self.y) not in visitados):   #TODO: buscas a visitados podem ser substituídas por buscas a nvisitados? 
+                if ((self.x-1, self.y) not in visitados):   #TODO: buscas a visitados podem ser substituídas por buscas a nvisitados?
                     nvisitados.append((0, (-1, 0)))
             elif direcao == 1:
                 if ((self.x, self.y+1) not in visitados):
@@ -253,27 +253,27 @@ class AspiradorIII(Process):
         self.energia -= 1
         self.recuperarMovimento = choiced[0]
         return 'mover %s' % self.recuperarMovimento
-                    
-    
+
+
     def tracarPlanoRecarga(self,st):
         if len(self.recargas) == 0:
-            return self.escolherDirecao(st[:4])         
+            return self.escolherDirecao(st[:4])
         self.plano = self.PLANO_RECARREGAR
         self.nrecargas = int((self.ENERGIAMAX - self.energia)/10)
-        
+
         if st[6] == True: #o agente já está em um ponto de recarga
             self.movimentar = []
             self.nrecargas -= 1
             return 'recarregar'
-            
+
         minx, maxx, miny, maxy = self.calcularDimensoes()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
         matriz = [[-1000 for i in range(sizey)] for i in range(sizex)]
-        
+
         for x, y in self.visitados.keys():
-            matriz[x-minx][y-miny] = 1000   
-        
+            matriz[x-minx][y-miny] = 1000
+
         for x,y in self.recargas:
             matriz[x - minx][y - miny] = -1
         caminho = self.caminhoMaisCurto(matriz, (self.x, self.y),minx, maxx,miny, maxy)
@@ -282,45 +282,45 @@ class AspiradorIII(Process):
         self.energia -= 1
         self.px, self.py = self.DELTA_POS[self.recuperarMovimento]
         return "mover %s" % self.recuperarMovimento
-                
+
     def tracarPlanoDeposito(self,st):
         if len(self.lixeiras) == 0:
             return self.escolherDirecao(st[:4])
         self.plano = self.PLANO_DEPOSITAR
-    
+
         if st[5] == True: #o agente já está em um ponto de recarga
             self.movimentar = []
             self.plano = None
             return 'depositar'
-        
+
         minx, maxx, miny, maxy = self.calcularDimensoes()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
         matriz = [[-1000 for i in range(sizey)] for i in range(sizex)]
-        
+
         for x, y in self.visitados.keys():
-            matriz[x-minx][y-miny] = 1000               
-           
+            matriz[x-minx][y-miny] = 1000
+
         for x,y in self.lixeiras:
-            matriz[x - minx][y - miny] = -1     
+            matriz[x - minx][y - miny] = -1
         caminho = self.caminhoMaisCurto(matriz, (self.x, self.y),minx, maxx,miny, maxy)
         self.movimentar = self.caminhoParaMovimentos(caminho)
         self.recuperarMovimento = self.movimentar.pop(0)
         self.energia -= 1
-        self.px, self.py = self.DELTA_POS[self.recuperarMovimento]          
+        self.px, self.py = self.DELTA_POS[self.recuperarMovimento]
         return "mover %s" % self.recuperarMovimento
-    
+
     def tracarPlanoSujeira(self):
         self.plano = self.PLANO_SUJEIRA
-            
+
         minx, maxx, miny, maxy = self.calcularDimensoes()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
         matriz = [[-1000 for i in range(sizey)] for i in range(sizex)]
-        
+
         for x, y in self.visitados.keys():
-            matriz[x-minx][y-miny] = 1000   
-        
+            matriz[x-minx][y-miny] = 1000
+
         for x,y in self.sujeiras:
             matriz[x - minx][y - miny] = -1
         caminho = self.caminhoMaisCurto(matriz, (self.x, self.y),minx, maxx,miny, maxy)
@@ -328,15 +328,15 @@ class AspiradorIII(Process):
         self.recuperarMovimento = self.movimentar.pop(0)
         self.energia -= 1
         self.px, self.py = self.DELTA_POS[self.recuperarMovimento]
-        return "mover %s" % self.recuperarMovimento     
-                
+        return "mover %s" % self.recuperarMovimento
+
     def tracarPlanoExploracao(self):
         self.plano = self.PLANO_EXPLORAR
         minx, maxx, miny, maxy = self.calcularDimensoes()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
         matriz = [[-1 for i in range(sizey)] for i in range(sizex)]
-        
+
         for x, y in self.visitados.keys():
             matriz[x-minx][y-miny] = 1000
         caminho = self.caminhoMaisCurto(matriz, (self.x, self.y),minx, maxx,miny, maxy)
@@ -345,23 +345,23 @@ class AspiradorIII(Process):
         self.recuperarMovimento = self.movimentar.pop(0)
         self.px, self.py = self.DELTA_POS[self.recuperarMovimento]
         return "mover %s" % self.recuperarMovimento
-    
+
     def calcularDimensoes(self):
         visitados = self.visitados.keys()
         if len(self.nvisitados) != 0:
             maxx = max(max(visitados)[0], max(self.nvisitados)[0])
             minx = min(min(visitados)[0], min(self.nvisitados)[0])
             maxy = max(max(visitados, key=lambda k:k[1])[1],max(self.nvisitados, key=lambda k:k[1])[1])
-            miny = min(min(visitados, key=lambda k:k[1])[1],min(self.nvisitados, key=lambda k:k[1])[1])             
+            miny = min(min(visitados, key=lambda k:k[1])[1],min(self.nvisitados, key=lambda k:k[1])[1])
         else:
             maxx = max(visitados)[0]
             minx = min(visitados)[0]
             maxy = max(visitados, key=lambda k:k[1])[1]
-            miny = min(visitados, key=lambda k:k[1])[1]             
-    
-    
+            miny = min(visitados, key=lambda k:k[1])[1]
+
+
         return minx, maxx, miny, maxy
-    
+
     def caminhoMaisCurto(self, matriz, atual, minx, maxx, miny, maxy):
         fila = deque()
         caminho = []
@@ -369,7 +369,7 @@ class AspiradorIII(Process):
         px, py = atual
         matriz[px-minx][py-miny] =  0
         peso = 0
-        while len(fila) > 0:            
+        while len(fila) > 0:
             px, py = fila.popleft()
             if matriz[px - minx][py - miny] ==  -1:
                 return (px,py) #TODO: se entrar aqui (é possível?) vai dar bug!!!!!!
@@ -394,7 +394,7 @@ class AspiradorIII(Process):
                             caminho.append((opx, opy - 1))
                             opy -= 1
                             peso -= 1
-                            continue            
+                            continue
                         #Norte
                         if (opx - minx - 1 >= 0) and (matriz[opx - minx - 1][opy - miny] == peso):
                             caminho.append((opx - 1, opy))
@@ -405,11 +405,11 @@ class AspiradorIII(Process):
                             caminho.append((opx, opy + 1))
                             peso -= 1
                             opy += 1
-                            continue            
+                            continue
                     return caminho[::-1]
         print 'nao encontrou caminho!'
         print self.info()
-    
+
     #Método auxiliar que realiza a conversão de estados(paredes) para direções
     def estadosParaDirecoes(self, pos, st):
         ret = []
@@ -417,13 +417,13 @@ class AspiradorIII(Process):
         if st[0] == False:
             ret.append((x-1,y))
         if st[1] == False:
-            ret.append((x,y+1))         
+            ret.append((x,y+1))
         if st[2] == False:
             ret.append((x+1,y))
         if st[3] == False:
             ret.append((x,y-1))
         return ret
-    
+
     def caminhoParaMovimentos (self, caminho):
         movimentos = []
         orix, oriy = caminho[0]
@@ -441,40 +441,40 @@ class AspiradorIII(Process):
                     movimentos.append(1)
             orix, oriy = desx, desy
         return movimentos
-    
-                    
+
+
     def limpar(self):
         #O agente executa a ação de limpar em sua posição atual.
         self.sujeiras.discard((self.x, self.y))
         self.reservatorio += 1
-    
+
     def carregar(self):
         self.energia += 10
-        
+
     def depositar(self):
         self.energia -= 1
         self.reservatorio = 0
-                
+
     def parar(self):
         #O agente permanece parado e apenas informa esse fato ao observador.
         self.info()
         while True:
             pass
-                
+
     def mover(self):
         #movimento realizado com sucesso
         self.x += self.px
         self.y += self.py
-        
+
     def colidir(self):
-        print 'colidi'          
+        print 'colidi'
         self.energia -= 1
         if self.plano != None:
             self.movimentar.insert(0,self.recuperarMovimento)
-            
+
     def nop(self):
         pass
-            
+
     def info(self):
         print '*'*10
         print 'posicao', (self.x, self.y)
@@ -483,10 +483,10 @@ class AspiradorIII(Process):
         print 'nvisitados', self.nvisitados
         print 'lixeiras', self.lixeiras
         print 'recargas', self.recargas
-        print 'sujeiras', self.sujeiras 
+        print 'sujeiras', self.sujeiras
         print '*'*10
 
-        
+
 if __name__ == '__main__':
     agente = AspiradorIII(1, *sys.argv[1:])
     agente.start()
