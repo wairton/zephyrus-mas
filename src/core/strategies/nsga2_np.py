@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 
 class Nsga2(object):
     def __init__(self, npop, maxite):
@@ -6,45 +8,48 @@ class Nsga2(object):
         self.mainlog = None
         self.poplog = None
 
-
-    #retorna uma lista de frontes
-    def fastNondominatedSort(self, populacao):
-        frontes = []
-        fronteAtual = []
-        for individuo in populacao:
-            individuo.ndominam = 0
-            individuo.dominadas = []
-        for indiceI, individuo in enumerate(populacao):
-            for indiceO, outroIndividuo in enumerate(populacao):
-                if indiceI == indiceO:
+    def fastNondominatedSort(self, population):
+        """
+        returns a list of fronts
+        """
+        fronts = []
+        currentFront = []
+        for individual in population:
+            individual.ndominam = 0
+            individual.dominadas = []
+        for indexI, individual in enumerate(population):
+            for indexO, outroIndividuo in enumerate(population):
+                if indexI == indexO:
                     continue
-                comp = individuo.comparar(outroIndividuo)
+                comp = individual.comparar(outroIndividuo)
                 if comp == COMP_DOMINA:
-                    individuo.dominadas.append(indiceO)
+                    individual.dominadas.append(indexO)
                 elif comp == COMP_DOMINADA:
-                    individuo.ndominam += 1
-            if individuo.ndominam == 0:
-                individuo.fitness = 1
-                fronteAtual.append(individuo)
+                    individual.ndominam += 1
+            if individual.ndominam == 0:
+                individual.fitness = 1
+                currentFront.append(individual)
 
-        frontes.append(fronteAtual)
+        fronts.append(currentFront)
         i = 0
-        while len(frontes[i]) > 0:
-            fronteAnterior = frontes[i]
-            fronteNovo = []
-            for individuo in fronteAnterior:
-                for indice in individuo.dominadas:
-                    q = populacao[indice] #tentativa de reduzir o acesso a índices de listas
+        while len(fronts[i]) > 0:
+            previousFront = fronts[i]
+            newFront = []
+            for individual in previousFront:
+                for index in individual.dominadas:
+                    q = population[index] #tentativa de reduzir o acesso a índices de listas
                     q.ndominam -= 1
                     if q.ndominam == 0:
                         q.fitness = i + 2
-                        fronteNovo.append(q)
+                        newFront.append(q)
             i += 1
-            frontes.append(fronteNovo)
-        return frontes  #NOTE: retorna um fronte vazio também?
+            fronts.append(newFront)
+        return fronts  #NOTE: retorna um fronte vazio também?
 
-    #TODO: modificar nomenclatura desse método.
     def crowdingDistanceAssignment(self, pontos):
+        """
+        #TODO: modificar nomenclatura desse método.
+        """
         for i in pontos:
             i.distancia = 0.0
         nobjetivos = len(pontos[0].objetivos)
@@ -72,9 +77,11 @@ class Nsga2(object):
             log.write('\n')
         log.close()
 
-    #TODO: mudar o nome para unir populações?
     def gerarConjunto(self, pop1, pop2):
-        extra = filter(lambda p:p.cloned==False, pop2)
+        """
+        #TODO: mudar o nome para unir populações?
+        """
+        extra = filter(lambda p: not p.cloned, pop2)
         return pop1+extra
 
 
@@ -84,7 +91,7 @@ class Nsga2(object):
         q = []
         i = 0
         while i < self.maxite:
-            log = open(self.mainlog,"a")
+            log = open(self.mainlog, "a")
             log.write("\nGeração %s\n" % (i+1))
             log.close()
             #print "Geração %s" % (i+1),
@@ -98,7 +105,7 @@ class Nsga2(object):
                 p.extend(fronte)
                 if len(p) >= self.npop:
                     break
-            p = sorted(p, key = lambda el: el.distancia, reverse = True)
+            p = sorted(p, key=lambda el: el.distancia, reverse=True)
             p = p[:self.npop]
             q = self.gerarPopulacao(p, self.npop)
             i += 1
