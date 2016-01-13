@@ -111,3 +111,34 @@ class Nsga2(object):
             i += 1
             self.gravarPopulacao(i, p)
         return p
+
+
+
+class Solution(object):
+    def __init__(self, tipo):
+        self.cromossomo = None
+        self.objetivos = None
+        self.tipo = tipo #maximizar ou minimizar
+        self.dominadas = [] #conjunto S do artigo
+        self.ndominam = 0 #ni
+        self.distancia = 0.0 #para crowding-distance
+        self.fitness = None
+
+
+    def comparar(self, outraSolucao):
+        res = None
+        if self.tipo == MIN:
+            res = map(lambda a,b: a <= b, self.objetivos, outraSolucao.objetivos)
+        else:
+            res = map(lambda a,b: a >= b, self.objetivos, outraSolucao.objetivos)
+        false, true = False in res, True in res #NOTE: o nome dessas variáveis torna o código confuso
+        if false and true:
+            return 0 #nem domina nem é dominada
+        elif true:
+            return 1 #domina
+        else:
+            return -1 #é dominada
+        #a opção not false e not true não pode ser teoricamente atingida
+
+    def __str__(self):
+        return repr(self.valores)
