@@ -8,7 +8,7 @@ from testador import TestadorAspirador
 
 
 if __name__ == '__main__':
-    roteiro = Roteiro('batata')
+    roteiro = Roteiro()
     roteiro.load(sys.argv[1])
     testador = TestadorAspirador()
     testador.inicializarSimulacao(roteiro)

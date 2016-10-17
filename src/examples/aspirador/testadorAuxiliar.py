@@ -16,14 +16,14 @@ class TestadorAuxiliarAspirador(Process):
     def __init__(self, auxId, configuracao):
         self.configuracao = json.load(open(configuracao))
         self.auxId = auxId
-        
+
     def run(self):
         self.conectarComPrincipal()
         self.inicializarParticipantes()
         self.socketMonitor.connect(self.enderecos.endereco('monitor'))
         self.socketConfiguracoes = contexto.socket(zmq.PUB)
         self.socketConfiguracoes.bind(self.enderecos.endereco('testador_par'))
-        
+
     def inicializarParticipantes(self):
         if not '<MANUAL>' in self.configs['exe']['monitor']: #monitor
             subp.Popen(self.configs['exe']['monitor'].split())
@@ -31,23 +31,23 @@ class TestadorAuxiliarAspirador(Process):
             endereco = self.enderecos.endereco('monitor')
             print 'execute o monitor manualmente, esperado em: ', endereco
             raw_input('\npressione enter para continuar')
-        if not '<MANUAL>' in self.configs['exe']['ambiente']: #ambiente
-            subp.Popen(self.configs['exe']['ambiente'].split())
+        if not '<MANUAL>' in self.configs['exe']['environment']: #ambiente
+            subp.Popen(self.configs['exe']['environment'].split())
         else:
-            endereco = self.enderecos.endereco('ambiente')
+            endereco = self.enderecos.endereco('environment')
             print 'execute o ambiente manualmente, esperado em: ', endereco
             raw_input('\npressione enter para continuar')
-        for i, agente in enumerate(self.configs['exe']['agentes']): #agentes
+        for i, agente in enumerate(self.configs['exe']['agents']): #agentes
             if not '<MANUAL>' in agente:
                 subp.Popen(agente.split())
             else:
-                endereco = self.enderecos.endereco('agente')
+                endereco = self.enderecos.endereco('agent')
                 print 'execute o agente manualmente, esperado em: ', endereco
-                raw_input('\npressione enter para continuar')                
-        if not '<MANUAL>' in self.configs['exe']['estrategia']: #estratégia
-            subp.Popen(self.configs['exe']['estrategia'].split())
+                raw_input('\npressione enter para continuar')
+        if not '<MANUAL>' in self.configs['exe']['strategy']: #estratégia
+            subp.Popen(self.configs['exe']['strategy'].split())
         else:
-            endereco = self.enderecos.endereco('estrategia')
+            endereco = self.enderecos.endereco('strategy')
             print 'execute o estratégia manualmente, esperado em: ', endereco
             raw_input('\npressione enter para continuar')
 
@@ -126,7 +126,7 @@ class TestadorAuxiliarAspirador(Process):
 
         self.pipeTesteInteracaoA, self.pipeTesteInteracaoB = Pipe()
         self.pipeTesteAmbienteA, self.pipeTesteAmbienteB = Pipe()
-        
+
         contexto = zmq.Context()
         self.socketSend = contexto.socket(zmq.PUSH)
         self.socketSend.bind('tcp://' + self.configuracao['testador'])

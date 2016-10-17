@@ -37,6 +37,9 @@ class Enderecos(object):
         found = filter(lambda k:k[0] == nome, self.addresses.values())
         return found[0] if len(found) != 0 else None
 
+    def __str__(self):
+        return '<Enderecos>: ' + str(self.addresses)
+
 
 if __name__ == '__main__':
     Enderecos(sys.argv[1])

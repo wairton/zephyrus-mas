@@ -19,11 +19,11 @@ class MonitorAspirador(Monitor):
         self.participantes = {}
         self._log = []
         self.configuracao = json.load(open(arqEstrategia))
-    
+
     @property
     def log(self):
         return self._log[:]
-    
+
     def pronto(self):
         while True:
             msgTestador = self.socketReceive.recv().split()
@@ -73,9 +73,9 @@ class MonitorAspirador(Monitor):
                 consumo += 1
                 if consumo > consumoMax:
                     consumoMax = consumo
-                    
+
         fatorx = nrecolhidos / float(nsujeiras)
-        
+
         tamanho = 0.0
         if resolucao == None:
             tamanho = float(self.configuracao["resolucao"] ** 2)
@@ -86,7 +86,7 @@ class MonitorAspirador(Monitor):
             consumoMin = (tamanho + nrecolhidos) / float(self.configuracao["carga"])
         else:
             consumoMin = (tamanho + nrecolhidos) / float(ncargas)
-            
+
         if nmovimentos < tamanho:
             obj1 = 50.0 * fatorx
         else:
@@ -95,41 +95,43 @@ class MonitorAspirador(Monitor):
             obj2 = 0.0
         else:
             obj2 = fatorx * (100.0 / 2 ** (log(consumoMax/consumoMin,4.5)))
-        
+
         #print (obj1, obj2)
         self.socketTestador.send("%s %s" %(obj1,obj2))
-    
+
 
     def run(self):
         contexto = zmq.Context()
         self.socketReceive = contexto.socket(zmq.PULL)
         self.socketReceive.bind(self.endereco)
         self.socketTestador = contexto.socket(zmq.PUSH)
-        self.socketTestador.connect(self.enderecos.endereco('testador'))
+        self.socketTestador.connect(self.enderecos.endereco('tester'))
         self.socketsParticipantes   = {}
+        print '?' * 100
+        print self.participantes
         for chave in self.participantes.keys():
             self.socketsParticipantes[chave] = contexto.socket(zmq.PUSH)
             self.socketsParticipantes[chave].connect(self.participantes[chave])
-        
+
         self.pronto()
         time.sleep(1) #este tempo é necessário para garantir o envio das mensagens para os participantes
         print 'monitor finalizando...'
-            
-                    
+
+
     def adicionarParticipante(self, pid, endereco):
         """
         participante -> tupla contendo referência ao agente e o seu apelido.
         """
         self.participantes[pid] = endereco
-        
-            
+
+
     def removerParticipante(self, pid):
         del self.participantes[pid]
-        
-    
+
+
 
 if __name__ == '__main__':
     m = MonitorAspirador(*sys.argv[1:])
-    m.adicionarParticipante(0, m.enderecos.endereco('ambiente'))
-    m.adicionarParticipante(1, m.enderecos.endereco('agente'))
+    m.adicionarParticipante(0, m.enderecos.endereco('environment'))
+    m.adicionarParticipante(1, m.enderecos.endereco('agent'))
     m.start()

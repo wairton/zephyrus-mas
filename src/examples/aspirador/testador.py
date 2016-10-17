@@ -40,14 +40,14 @@ class TestadorAspirador(Process):
             self.socketMonitor = contexto.socket(zmq.PUSH)
             self.socketMonitor.connect(self.enderecos.endereco('monitor'))
             self.socketConfiguracoes = contexto.socket(zmq.PUB)
-            self.socketConfiguracoes.bind(self.enderecos.endereco('testador_par'))
+            self.socketConfiguracoes.bind(self.enderecos.endereco('tester_par'))
         elif modo == 'dist':
             self.incializarParticipantesDistribuido()
             #...
         else:
             raise CoreException("Modo de funcionamento desconhecido: %s" % modo)
         self.socketEstrategia = contexto.socket(zmq.PUSH)
-        self.socketEstrategia.connect(self.enderecos.endereco('estrategia'))
+        self.socketEstrategia.connect(self.enderecos.endereco('strategy'))
         self.loopPrincipal(modo)
         print 'finalizando os testes...'
         time.sleep(2)
@@ -55,6 +55,7 @@ class TestadorAspirador(Process):
 
     def inicializarParticipantesCentralizado(self):
         if not '<MANUAL>' in self.configs['exe']['monitor']: #monitor
+            print self.configs['exe']['monitor'].split()
             subp.Popen(self.configs['exe']['monitor'].split())
         else:
             endereco = self.enderecos.endereco('monitor')
@@ -70,18 +71,18 @@ class TestadorAspirador(Process):
             #endereco = self.configs['end']['ambiente'].split(',')[-1]
             print 'execute o ambiente manualmente, esperado em: ', endereco
             raw_input('\npressione enter para continuar')
-        for i, agente in enumerate(self.configs['exe']['agentes']): #agentes
+        for i, agente in enumerate(self.configs['exe']['agents']): #agentes
             if not '<MANUAL>' in agente:
                 subp.Popen(agente.split())
             else:
-                endereco = self.enderecos.endereco('agente')
+                endereco = self.enderecos.endereco('agent')
                 #endereco = self.configs['end']['agentes'][i].split(',')[-1]
                 print 'execute o agente manualmente, esperado em: ', endereco
                 raw_input('\npressione enter para continuar')
-        if not '<MANUAL>' in self.configs['exe']['estrategia']: #estratégia
-            subp.Popen(self.configs['exe']['estrategia'].split())
+        if not '<MANUAL>' in self.configs['exe']['strategy']: #estratégia
+            subp.Popen(self.configs['exe']['strategy'].split())
         else:
-            endereco = self.enderecos.endereco('estrategia')
+            endereco = self.enderecos.endereco('strategy')
             #endereco = self.configs['end']['estrategia'].split(',')[-1]
             print 'execute o estratégia manualmente, esperado em: ', endereco
             raw_input('\npressione enter para continuar')
@@ -96,7 +97,11 @@ class TestadorAspirador(Process):
         resolucao = self.configs['sim']['resolucao']
         ncargas = self.configs['sim']['carga']
         sujeiras = self.configs['sim']['sujeira']
-        nomeAmbiente = self.enderecos.get('ambiente')[0]
+        print '-' * 100
+        print self.enderecos.get('environment')
+        print '-' * 100
+        # nomeAmbiente = self.enderecos.get('environment')[0]
+        nomeAmbiente = self.enderecos.get('environment')['alias']
         while True:
             msg = self.socketReceive.recv()
             if "###" in msg:
@@ -114,7 +119,8 @@ class TestadorAspirador(Process):
             ambiente = ' '.join(map(str,ambiente))
             resultados = []
             for i in range(self.configs['sim']['repeat']):
-                self.socketConfiguracoes.send('%s %s,%s,%s,%s,%s' % (nomeAmbiente, ambiente, resolucao,iagente,linha,coluna))
+                message = '%s %s,%s,%s,%s,%s' % (nomeAmbiente, ambiente, resolucao,iagente,linha,coluna)
+                self.socketConfiguracoes.send(message.encode('ascii'))
                 self.socketMonitor.send("@@@ %s %s %s" % (resolucao, ncargas, sujeiras))
                 #print ambiente
                 resultados.append(map(float, self.socketReceive.recv().split()))

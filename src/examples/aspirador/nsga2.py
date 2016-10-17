@@ -349,12 +349,12 @@ class Nsga2Aspirador(Nsga2):
     def run(self):
         contexto = zmq.Context()
         self.socketSend = contexto.socket(zmq.PUSH)
-        self.socketSend.connect(self.enderecos.endereco('testador'))
+        self.socketSend.connect(self.enderecos.endereco('tester'))
         self.socketReceive = contexto.socket(zmq.PULL)
-        self.socketReceive.bind(self.enderecos.endereco('estrategia'))
+        self.socketReceive.bind(self.enderecos.endereco('strategy'))
         popFinal = self.mainLoop()
         Nsga2Aspirador.draw(popFinal, 'pop_final.txt')
-        
+
         self.socketSend.send("###")
 
     def configurar(self, **args):

@@ -20,7 +20,7 @@ class AspiradorIII(Process):
 
         self.mid = agId
         self.enderecos = Enderecos(configEnd)
-        self.endereco = self.enderecos.endereco('agente')
+        self.endereco = self.enderecos.endereco('agent')
         self.enderecoMonitor = self.enderecos.endereco('monitor')
         self.componentes  = Componentes(configCom)
 

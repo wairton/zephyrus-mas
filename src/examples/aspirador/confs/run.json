@@ -1,6 +1,6 @@
 {
-"strategy" : "python nsga2.py confs/estrategia.conf confs/addresses.json confs/componentes.conf",
-"monitor" : "python monitor.py confs/addresses.json confs/estrategia.conf",
+"strategy" : "python nsga2.py confs/strategy.json confs/addresses.json confs/componentes.conf",
+"monitor" : "python monitor.py confs/addresses.json confs/strategy.json",
 "environment" : "python ambiente.py confs/addresses.json confs/componentes.conf",
 "agents" : ["python agente.py confs/addresses.json confs/componentes.conf"]
 }
