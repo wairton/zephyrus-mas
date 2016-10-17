@@ -4,3 +4,7 @@
 class CoreException(Exception):
     "accidents happens"
     pass
+
+
+class ZephyrusException(Exception):
+    pass

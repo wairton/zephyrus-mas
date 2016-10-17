@@ -2,8 +2,9 @@
 #-*-coding:utf-8-*-
 #This work is under LGPL license, see the LICENSE.LGPL file for further details.
 
-import time
 import sys
+import time
+import logging
 from random import choice
 from collections import deque
 from multiprocessing import Process
@@ -12,6 +13,7 @@ import zmq
 
 from core.componentes import Componentes
 from core.enderecos import Enderecos
+from core.exceptions import ZephyrusException
 
 
 class AspiradorIII(Process):
@@ -21,11 +23,11 @@ class AspiradorIII(Process):
         self.mid = agId
         self.enderecos = Enderecos(configEnd)
         self.endereco = self.enderecos.endereco('agent')
-        self.enderecoMonitor = self.enderecos.endereco('monitor')
+        self.endereco_monitor = self.enderecos.endereco('monitor')
         self.componentes  = Componentes(configCom)
 
-        self.socketReceive = None
-        self.socketSend = None
+        self.socket_receive = None
+        self.socket_send = None
 
         self.enviar = True #True se agente deve enviar mensagem, False caso esteja esperando resposta
         self.agindo = True #False para enviar ação de perceber
@@ -40,7 +42,6 @@ class AspiradorIII(Process):
         self.tiposPlano = (self.PLANO_EXPLORAR, self.PLANO_RECARREGAR, self.PLANO_DEPOSITAR, self.PLANO_SUJEIRA)
 
         self.reiniciarMemoria()
-
 
     def perceber(self, percebido):
         #define o momento em que o agente enxerga o ambiente captando informações sobre
@@ -73,18 +74,18 @@ class AspiradorIII(Process):
         self.recuperarMovimento = 0 #armazena um movimento tentado para recuperá-lo em caso de falha.
 
     def run(self):
-        print 'Agente rodando!!!'
+        logging.debug('Agente rodando!!!')
         contexto = zmq.Context()
-        self.socketReceive = contexto.socket(zmq.PULL)
-        self.socketReceive.bind(self.endereco)
-        self.socketSend = contexto.socket(zmq.PUSH)
-        self.socketSend.connect(self.enderecoMonitor)
+        self.socket_receive = contexto.socket(zmq.PULL)
+        self.socket_receive.bind(self.endereco)
+        self.socket_send = contexto.socket(zmq.PUSH)
+        self.socket_send.connect(self.endereco_monitor)
         self.ready()
 
     def ready(self):
-        print "Agent %s is ready." % (self.mid)
+        logging.info("Agent %s is ready." % (self.mid))
         while True:
-            msg = self.socketReceive.recv()
+            msg = self.socket_receive.recv()
             if msg == "@@@":
                 self.reiniciarMemoria()
                 self.enviar = True
@@ -92,23 +93,23 @@ class AspiradorIII(Process):
                 while True:
                     if self.enviar:
                         if self.agindo == False:
-                            self.socketSend.send("%s %s perceber" % (self.mid, 0))
+                            self.socket_send.send("%s %s perceber" % (self.mid, 0))
                             self.enviar = False
                         else:
                             acao = self.perceber(self.percebido)
                             msg = "%s %s " % (self.mid, 0)
                             #TODO: tratar o caso PARAR
-                            self.socketSend.send(msg + acao)
+                            self.socket_send.send(msg + acao)
                             self.enviar = False
                             pass
                     else:
                         if self.agindo == False:
-                            msg = self.socketReceive.recv()
+                            msg = self.socket_receive.recv()
                             self.enviar = True
                             self.agindo = True
                             self.percebido = int(msg.split()[2])
                         else:
-                            msg = self.socketReceive.recv() #apenas um feddback (ack)
+                            msg = self.socket_receive.recv() #apenas um feddback (ack)
                             retorno = msg.split()[-1]
                             if retorno == 'moveu':
                                 self.mover()
@@ -129,11 +130,10 @@ class AspiradorIII(Process):
                             self.enviar = True
                             self.agindo = False
             elif msg == "###":
-                print "Agente %s recebeu mensagem de finalização de atividades." % (self.mid)
+                logging.info("Agente %s recebeu mensagem de finalização de atividades." % (self.mid))
                 break
             else:
-                print "Agente %s recebeu mensagem inválida." % (self.mid)
-
+                logging.warning("Agente %s recebeu mensagem inválida." % (self.mid))
 
     def agir(self, st):
         self.memorizarAmbiente(st)
@@ -148,7 +148,7 @@ class AspiradorIII(Process):
                         self.plano = None
                     return "mover %s" % self.recuperarMovimento
                 else:
-                    print 'erro na função agir' #TODO: transformar isso em execeção
+                    raise ZephyrusException('erro na função agir')
             elif self.plano == self.PLANO_DEPOSITAR:
                 if len(self.movimentar) > 0:
                     self.recuperarMovimento = self.movimentar.pop(0)
@@ -179,7 +179,7 @@ class AspiradorIII(Process):
                     self.plano = None
                     return "limpar"
             else:
-                print "plano desconhecido" #TODO: transformar em exceção
+                raise ZephyrusException("plano desconhecido")
 
         elif (self.energia / self.ENERGIAMAX) < self.limiteRecarga:
             return self.tracarPlanoRecarga(st)
@@ -253,7 +253,6 @@ class AspiradorIII(Process):
         self.energia -= 1
         self.recuperarMovimento = choiced[0]
         return 'mover %s' % self.recuperarMovimento
-
 
     def tracarPlanoRecarga(self,st):
         if len(self.recargas) == 0:
@@ -359,7 +358,6 @@ class AspiradorIII(Process):
             maxy = max(visitados, key=lambda k:k[1])[1]
             miny = min(visitados, key=lambda k:k[1])[1]
 
-
         return minx, maxx, miny, maxy
 
     def caminhoMaisCurto(self, matriz, atual, minx, maxx, miny, maxy):
@@ -407,8 +405,8 @@ class AspiradorIII(Process):
                             opy += 1
                             continue
                     return caminho[::-1]
-        print 'nao encontrou caminho!'
-        print self.info()
+        logging.debug('nao encontrou caminho!')
+        logging.info(self.info())
 
     #Método auxiliar que realiza a conversão de estados(paredes) para direções
     def estadosParaDirecoes(self, pos, st):
@@ -442,7 +440,6 @@ class AspiradorIII(Process):
             orix, oriy = desx, desy
         return movimentos
 
-
     def limpar(self):
         #O agente executa a ação de limpar em sua posição atual.
         self.sujeiras.discard((self.x, self.y))
@@ -467,7 +464,7 @@ class AspiradorIII(Process):
         self.y += self.py
 
     def colidir(self):
-        print 'colidi'
+        logging.debug('colidi')
         self.energia -= 1
         if self.plano != None:
             self.movimentar.insert(0,self.recuperarMovimento)
@@ -476,15 +473,18 @@ class AspiradorIII(Process):
         pass
 
     def info(self):
-        print '*'*10
-        print 'posicao', (self.x, self.y)
-        print self.energia, self.reservatorio, self.plano
-        print 'visitados', self.visitados.keys()
-        print 'nvisitados', self.nvisitados
-        print 'lixeiras', self.lixeiras
-        print 'recargas', self.recargas
-        print 'sujeiras', self.sujeiras
-        print '*'*10
+        info = []
+        separator = '*' * 10
+        info.append(separator)
+        info.append('posicao: {} {}'.format(self.x, self.y))
+        info.append('{} {} {}'.format(self.energia, self.reservatorio, self.plano))
+        info.append('visitados: {}', self.visitados.keys())
+        info.append('nvisitados: {}'.format(self.nvisitados))
+        info.append('lixeiras: {}'.format(self.lixeiras))
+        info.append('recargas: {}'.format(self.recargas))
+        info.append('sujeiras: {}'.format(self.sujeiras))
+        info.append(separator)
+        return '\n'.join(info)
 
 
 if __name__ == '__main__':
