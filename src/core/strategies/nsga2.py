@@ -25,13 +25,13 @@ INFINITY = 1e1000
 
 
 class Solution(object):
-    def __init__(self, type):
+    def __init__(self, solution_type):
         self.chromossome = None
         self.objectives = None
-        self.type = type #maximizar ou minimizar
-        self.dominadas = [] #conjunto S do artigo
-        self.ndominam = 0 #ni
-        self.distance = 0.0 #para crowding-distance
+        self.type = solution_type
+        self.dominadas = []  # conjunto S do artigo
+        self.ndominam = 0
+        self.distance = 0.0  # para crowding-distance
         self.fitness = None
 
     def compare(self, other_solution):
@@ -47,14 +47,14 @@ class Solution(object):
         return repr(self.valores)
 
 
-class SolutionAspirador(Solution):
-    def __init__(self, type):
-        super(SolutionAspirador, self).__init__(type)
+class VaccumCleanerSolution(Solution):
+    def __init__(self, solution_type):
+        super().__init__(solution_type)
         self.chromossome = []
         self.cloned = False
 
     def clone(self):
-        clone = SolutionAspirador(self.type)
+        clone = VaccumCleanerSolution(self.type)
         clone.chromossome = self.chromossome[:]
         clone.objectives = self.objectives[:]
         clone.type = self.type
@@ -69,14 +69,13 @@ class SolutionAspirador(Solution):
         resolucao = int(math.sqrt(len(self.chromossome)))
         pos = ['_','*', 'u','$','@']
         for i in range(resolucao):
-                for j in range(resolucao):
-                        destino.write(pos[self.chromossome[i*resolucao+j]] + ' ')
-                destino.write("\n")
+            for j in range(resolucao):
+                destino.write(pos[self.chromossome[i*resolucao+j]] + ' ')
+            destino.write("\n")
         destino.write("\n")
 
     def __str__(self):
         return repr(self.chromossome)
-
 
     def distanciaM(self, ta, tb):
         return abs(ta[0] - tb[0]) + abs(ta[1] - tb[1])
@@ -86,16 +85,15 @@ class SolutionAspirador(Solution):
         for i in xrange(len(decodificado)):
             gene = self.chromossome[i]
             if gene == 1:
-                    decodificado[i] = componentes.adicionar('LIXO',0)
+                decodificado[i] = componentes.adicionar('LIXO',0)
             elif gene == 2:
-                    decodificado[i] = componentes.adicionar('LIXEIRA',0)
+                decodificado[i] = componentes.adicionar('LIXEIRA',0)
             elif gene == 3:
-                    decodificado[i] = componentes.adicionar('RECARGA',0)
+                decodificado[i] = componentes.adicionar('RECARGA',0)
             elif gene == 4:
-                    decodificado[i] = componentes.adicionarVarios(['AG','AG03'],0)
+                decodificado[i] = componentes.adicionarVarios(['AG','AG03'],0)
             else:
-                    pass #TODO:exceção?
-
+                pass #TODO:exceção?
         return decodificado
 
     def avaliar(self, resolucao): #TODO: o parâmetro resolução é realmente necessário?
@@ -110,56 +108,55 @@ class SolutionAspirador(Solution):
             aux = resolucao**2 #valor maior que o máximo
             #NOTE: poderiam ser feitas com min(map())
             for n2, posl in lixeiras:
-                    atual = self.distanciaM(pos,posl)
-                    if atual < aux:
-                            aux = atual
+                atual = self.distanciaM(pos,posl)
+                if atual < aux:
+                    aux = atual
             dlixeira += aux
             aux = resolucao**2 #valor maior que o máximo
             for n2, posl in recargas:
-                    atual = self.distanciaM(pos,posl)
-                    if atual < aux:
-                            aux = atual
+                atual = self.distanciaM(pos,posl)
+                if atual < aux:
+                    aux = atual
             drecarga += aux
         self.objectives = (dlixeira, drecarga)
 
-    def reproduzir(self, outro, crossoverProb, mutacaoProb, resolucao, nsujeira, nlixeira, ncarga, nagente):
+    def reproduzir(self, outro, crossoverProb, mutationProb, resolucao, nsujeira, nlixeira, ncarga, nagente):
         novoIndividuo = self.crossover(outro, crossoverProb, resolucao, nsujeira, nlixeira, ncarga, nagente)
         #print novoIndividuo
-        ocorreuMutacao = novoIndividuo.mutacao(mutacaoProb)
+        ocorreuMutacao = novoIndividuo.mutation(mutationProb)
         if ocorreuMutacao:
-                novoIndividuo.objectives = None
-                novoIndividuo.cloned = False
+            novoIndividuo.objectives = None
+            novoIndividuo.cloned = False
         return novoIndividuo
 
     def crossover(self, outro, crossoverProb, resolucao, nsujeira, nlixeira, ncarga, nagente):
         if random() < crossoverProb:
-            novoIndividuo = SolutionAspirador(MIN)
-            pontoCrossover = resolucao**2/2
+            novoIndividuo = VaccumCleanerSolution(SolutionType.MIN)
+            pontoCrossover = resolucao ** 2 / 2
             novoIndividuo.chromossome.extend(self.chromossome[:pontoCrossover])
             posicoes = {}
-            maximos = (resolucao**2 - (nsujeira + nlixeira + ncarga + nagente), nsujeira, nlixeira, ncarga, nagente)
+            maximos = (resolucao ** 2 - (nsujeira + nlixeira + ncarga + nagente), nsujeira, nlixeira, ncarga, nagente)
             for i in range(5):
-                    posicoes[i] = 0
+                posicoes[i] = 0
             for gene in novoIndividuo.chromossome:
-                    posicoes[gene] += 1
+                posicoes[gene] += 1
             for gene in outro.chromossome[pontoCrossover:]:
-                    if posicoes[gene] < maximos[gene]:
-                            novoIndividuo.chromossome.append(gene)
-                            posicoes[gene] += 1
+                if posicoes[gene] < maximos[gene]:
+                    novoIndividuo.chromossome.append(gene)
+                    posicoes[gene] += 1
             for gene in outro.chromossome[:pontoCrossover]:
-                    if len(novoIndividuo.chromossome) == resolucao**2:
-                            break
-                    if posicoes[gene] < maximos[gene]:
-                            novoIndividuo.chromossome.append(gene)
-                            posicoes[gene] += 1
+                if len(novoIndividuo.chromossome) == resolucao**2:
+                    break
+                if posicoes[gene] < maximos[gene]:
+                    novoIndividuo.chromossome.append(gene)
+                    posicoes[gene] += 1
             return novoIndividuo
-        else:
-            return self.clone()
+        return self.clone()
 
-    def mutacao(self, mutacaoProb):
+    def mutation(self, mutationProb):
         ocorreuMutacao = False
         for i in xrange(len(self.chromossome)):
-            if random() < mutacaoProb:
+            if random() < mutationProb:
                 ocorreuMutacao = True
                 outro = sample(xrange(len(self.chromossome)), 1)
                 #NOTE: e se outro == i?
@@ -279,7 +276,7 @@ class Nsga2Aspirador(Nsga2):
     def __init__(self, npop, maxite):
         super(Nsga2Aspirador, self).__init__(npop, maxite)
         self.crossoverProb = 0.0
-        self.mutacaoProb = 0.0
+        self.mutationProb = 0.0
         self.nagentes = 0
         self.resolucao = 0
         self.nsujeira = 0
@@ -323,7 +320,7 @@ class Nsga2Aspirador(Nsga2):
             elif k == 'crossover':
                 self.crossoverProb = valor
             elif k == 'mutacao':
-                self.mutacao = valor
+                self.mutation = valor
             else:
                 print 'opção "%s" inválida' % (k)
 
@@ -336,7 +333,7 @@ class Nsga2Aspirador(Nsga2):
         nvazio = resolucao**2 - len(chromossome)
         chromossome.extend([0 for i in xrange(nvazio)])
         shuffle(chromossome)
-        individuo = SolutionAspirador(MIN)
+        individuo = VaccumCleanerSolution(SolutionType.MIN)
         individuo.chromossome = chromossome
         #individuo.avaliar(resolucao)
         individuo.objectives = self.avaliador(individuo.decodificar(self.componentes))
@@ -367,7 +364,7 @@ class Nsga2Aspirador(Nsga2):
         novaPopulacao = []
         for i in range(tamanho-1, -1,-1):
             #NOTE: refatore-me!!!!
-            novaPopulacao.append(selecionados[i].reproduzir(selecionados[i-1], self.crossoverProb, self.mutacaoProb, self.resolucao, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
+            novaPopulacao.append(selecionados[i].reproduzir(selecionados[i-1], self.crossoverProb, self.mutationProb, self.resolucao, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
         for individuo in novaPopulacao:
             if individuo.objectives == None:
                 individuo.objectives = self.avaliador(individuo.decodificar(self.componentes))
