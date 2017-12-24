@@ -3,3 +3,4 @@ env_zephyrus
 *.pyc
 *.swp
 *.out
+*.o
