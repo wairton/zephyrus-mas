@@ -8,3 +8,7 @@ class CoreException(Exception):
 
 class ZephyrusException(Exception):
     pass
+
+
+class ZephyrusConfigurationException(Exception):
+    pass

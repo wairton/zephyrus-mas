@@ -11,7 +11,9 @@ class Componentes(object):
         self.valores = {} #utilizado na busca de um nome a partir de um valor.
         try:
             linhas = open(configuracao, 'r').readlines()
-        except:
+        except Exception as e:
+            import pdb
+            pdb.set_trace()
             print "Erro durante a abertura do arquivo de configuração dos componentes."
             exit()
 

@@ -312,5 +312,5 @@ class Zephyrus(Events):
         tk.mainloop()
 
 
-#if __name__ == '__main__':
-#   Zephyrus()
+if __name__ == '__main__':
+   Zephyrus()
