@@ -1,90 +1,90 @@
-#-*-coding:utf-8-*-
-import math
-from random import shuffle, sample, random
-from componentes import Componentes
 import json
-import time
+import math
+import operator
 import sys
-#from funcao import mop2
+import time
 
-MIN = -1
-MAX = 1
+from enum import Enum
+from random import shuffle, sample, random
 
-INFINITO = 1e1000
-
-COMP_DOMINA = 1
-COMP_DOMINADA = -1
-COMP_NONE = 0
+from componentes import Componentes
 
 
-class Solucao(object):
-    def __init__(self, tipo):
-        self.cromossomo = None
-        self.objetivos = None
-        self.tipo = tipo #maximizar ou minimizar
+class SolutionType(Enum):
+    MIN = -1
+    MAX = 1
+
+
+class SolutionComp(Enum):
+    DOMINATES = 1
+    IS_DOMINATED = -1
+    NEITHER = 0
+
+
+INFINITY = 1e1000
+
+
+class Solution(object):
+    def __init__(self, type):
+        self.chromossome = None
+        self.objectives = None
+        self.type = type #maximizar ou minimizar
         self.dominadas = [] #conjunto S do artigo
         self.ndominam = 0 #ni
-        self.distancia = 0.0 #para crowding-distance
+        self.distance = 0.0 #para crowding-distance
         self.fitness = None
 
-
-    def comparar(self, outraSolucao):
-            res = None
-            if self.tipo == MIN:
-                    res = map(lambda a,b: a <= b, self.objetivos, outraSolucao.objetivos)
-            else:
-                    res = map(lambda a,b: a >= b, self.objetivos, outraSolucao.objetivos)
-            false, true = False in res, True in res #NOTE: o nome dessas variáveis torna o código confuso
-            if false and true:
-                    return 0 #nem domina nem é dominada
-            elif true:
-                    return 1 #domina
-            else:
-                    return -1 #é dominada
-            #a opção not false e not true não pode ser teoricamente atingida
+    def compare(self, other_solution):
+        comp_operator = operator.le if SolutionType.MIN else operator.ge
+        res = sum(map(comp_operator, self.objectives, other_solution.objectives))
+        if res == 0:
+            return SolutionComp.IS_DOMINATED
+        elif res == len(self.objectives):
+            return SolutionComp.DOMINATES
+        return SolutionComp.NEITHER
 
     def __str__(self):
-            return repr(self.valores)
+        return repr(self.valores)
 
 
-class SolucaoAspirador(Solucao):
-    def __init__(self, tipo):
-        super(SolucaoAspirador, self).__init__(tipo)
-        self.cromossomo = []
+class SolutionAspirador(Solution):
+    def __init__(self, type):
+        super(SolutionAspirador, self).__init__(type)
+        self.chromossome = []
         self.cloned = False
 
     def clone(self):
-        clone = SolucaoAspirador(self.tipo)
-        clone.cromossomo = self.cromossomo[:]
-        clone.objetivos = self.objetivos[:]
-        clone.tipo = self.tipo
+        clone = SolutionAspirador(self.type)
+        clone.chromossome = self.chromossome[:]
+        clone.objectives = self.objectives[:]
+        clone.type = self.type
         #clone.dominadas = self.dominadas[:]
         #clone.ndominam = self.ndominam
-        clone.distancia = self.distancia
+        clone.distance = self.distance
         clone.fitness = self.fitness
         clone.cloned = True
         return clone
 
     def draw(self, destino):
-        resolucao = int(math.sqrt(len(self.cromossomo)))
+        resolucao = int(math.sqrt(len(self.chromossome)))
         pos = ['_','*', 'u','$','@']
         for i in range(resolucao):
                 for j in range(resolucao):
-                        destino.write(pos[self.cromossomo[i*resolucao+j]] + ' ')
+                        destino.write(pos[self.chromossome[i*resolucao+j]] + ' ')
                 destino.write("\n")
         destino.write("\n")
 
     def __str__(self):
-        return repr(self.cromossomo)
+        return repr(self.chromossome)
 
 
     def distanciaM(self, ta, tb):
         return abs(ta[0] - tb[0]) + abs(ta[1] - tb[1])
 
     def decodificar(self, componentes):
-        decodificado = [0 for i in self.cromossomo]
+        decodificado = [0 for i in self.chromossome]
         for i in xrange(len(decodificado)):
-            gene = self.cromossomo[i]
+            gene = self.chromossome[i]
             if gene == 1:
                     decodificado[i] = componentes.adicionar('LIXO',0)
             elif gene == 2:
@@ -99,7 +99,7 @@ class SolucaoAspirador(Solucao):
         return decodificado
 
     def avaliar(self, resolucao): #TODO: o parâmetro resolução é realmente necessário?
-        pos = zip(self.cromossomo, [(i,j) for i in range(resolucao) for j in range(resolucao)])
+        pos = zip(self.chromossome, [(i,j) for i in range(resolucao) for j in range(resolucao)])
         sujeiras = filter(lambda k:k[0] == 1, pos)
         lixeiras = filter(lambda k:k[0] == 2, pos)
         recargas = filter(lambda k:k[0] == 3, pos)
@@ -120,37 +120,37 @@ class SolucaoAspirador(Solucao):
                     if atual < aux:
                             aux = atual
             drecarga += aux
-        self.objetivos = (dlixeira, drecarga)
+        self.objectives = (dlixeira, drecarga)
 
     def reproduzir(self, outro, crossoverProb, mutacaoProb, resolucao, nsujeira, nlixeira, ncarga, nagente):
         novoIndividuo = self.crossover(outro, crossoverProb, resolucao, nsujeira, nlixeira, ncarga, nagente)
         #print novoIndividuo
         ocorreuMutacao = novoIndividuo.mutacao(mutacaoProb)
         if ocorreuMutacao:
-                novoIndividuo.objetivos = None
+                novoIndividuo.objectives = None
                 novoIndividuo.cloned = False
         return novoIndividuo
 
     def crossover(self, outro, crossoverProb, resolucao, nsujeira, nlixeira, ncarga, nagente):
         if random() < crossoverProb:
-            novoIndividuo = SolucaoAspirador(MIN)
+            novoIndividuo = SolutionAspirador(MIN)
             pontoCrossover = resolucao**2/2
-            novoIndividuo.cromossomo.extend(self.cromossomo[:pontoCrossover])
+            novoIndividuo.chromossome.extend(self.chromossome[:pontoCrossover])
             posicoes = {}
             maximos = (resolucao**2 - (nsujeira + nlixeira + ncarga + nagente), nsujeira, nlixeira, ncarga, nagente)
             for i in range(5):
                     posicoes[i] = 0
-            for gene in novoIndividuo.cromossomo:
+            for gene in novoIndividuo.chromossome:
                     posicoes[gene] += 1
-            for gene in outro.cromossomo[pontoCrossover:]:
+            for gene in outro.chromossome[pontoCrossover:]:
                     if posicoes[gene] < maximos[gene]:
-                            novoIndividuo.cromossomo.append(gene)
+                            novoIndividuo.chromossome.append(gene)
                             posicoes[gene] += 1
-            for gene in outro.cromossomo[:pontoCrossover]:
-                    if len(novoIndividuo.cromossomo) == resolucao**2:
+            for gene in outro.chromossome[:pontoCrossover]:
+                    if len(novoIndividuo.chromossome) == resolucao**2:
                             break
                     if posicoes[gene] < maximos[gene]:
-                            novoIndividuo.cromossomo.append(gene)
+                            novoIndividuo.chromossome.append(gene)
                             posicoes[gene] += 1
             return novoIndividuo
         else:
@@ -158,12 +158,12 @@ class SolucaoAspirador(Solucao):
 
     def mutacao(self, mutacaoProb):
         ocorreuMutacao = False
-        for i in xrange(len(self.cromossomo)):
+        for i in xrange(len(self.chromossome)):
             if random() < mutacaoProb:
                 ocorreuMutacao = True
-                outro = sample(xrange(len(self.cromossomo)), 1)
+                outro = sample(xrange(len(self.chromossome)), 1)
                 #NOTE: e se outro == i?
-                self.cromossomo[i], self.cromossomo[outro] = self.cromossomo[outro], self.cromossomo[i]
+                self.chromossome[i], self.chromossome[outro] = self.chromossome[outro], self.chromossome[i]
         return ocorreuMutacao
 
 
@@ -176,7 +176,7 @@ class Nsga2(object):
 
 
     #retorna uma lista de frontes
-    def fastNondominatedSort(self, populacao):
+    def fast_non_dominated_sort(self, populacao):
         frontes = []
         fronteAtual = []
         for individuo in populacao:
@@ -186,10 +186,10 @@ class Nsga2(object):
             for indiceO, outroIndividuo in enumerate(populacao):
                 if indiceI == indiceO:
                         continue
-                comp = individuo.comparar(outroIndividuo)
-                if comp == COMP_DOMINA:
+                comp = individuo.compare(outroIndividuo)
+                if comp == SolutionComp.DOMINATES:
                         individuo.dominadas.append(indiceO)
-                elif comp == COMP_DOMINADA:
+                elif comp == SolutionComp.IS_DOMINATED:
                         individuo.ndominam += 1
             if individuo.ndominam == 0:
                 individuo.fitness = 1
@@ -214,18 +214,18 @@ class Nsga2(object):
     #TODO: modificar nomenclatura desse método.
     def crowdingDistanceAssignment(self, pontos):
         for i in pontos:
-            i.distancia = 0.0
-        nobjetivos = len(pontos[0].objetivos)
+            i.distance = 0.0
+        nobjectives = len(pontos[0].objectives)
         l = len(pontos)
-        for m in range(nobjetivos):
-            pontos = sorted(pontos, key=lambda ponto: ponto.objetivos[m])
-            pontos[0].distancia, pontos[-1].distancia = INFINITO, INFINITO
+        for m in range(nobjectives):
+            pontos = sorted(pontos, key=lambda ponto: ponto.objectives[m])
+            pontos[0].distance, pontos[-1].distance = INFINITY, INFINITY
             i = 1
             while (i < l-1):
-                pontos[i].distancia += (pontos[i+1].objetivos[m] - pontos[i-1].objetivos[m])
+                pontos[i].distance += (pontos[i+1].objectives[m] - pontos[i-1].objectives[m])
                 i += 1
 
-    def gerarPopulacaoInicial(self):
+    def gerar_populacao_inicial(self):
         raise NotImplementedError
 
     def gerarPopulacao(self):
@@ -235,7 +235,7 @@ class Nsga2(object):
         log = open(self.poplog,'a')
         log.write(str(pid) + '\n')
         for individuo in populacao:
-            for objetivo in individuo.objetivos:
+            for objetivo in individuo.objectives:
                 log.write(str(objetivo)+' ')
             log.write('\n')
         log.close()
@@ -246,8 +246,8 @@ class Nsga2(object):
         return pop1+extra
 
 
-    def mainLoop(self):
-        p = self.gerarPopulacaoInicial()
+    def main_loop(self):
+        p = self.gerar_populacao_inicial()
         self.gravarPopulacao(0, p)
         q = []
         i = 0
@@ -259,14 +259,14 @@ class Nsga2(object):
             print >> sys.stderr, '.',
             #r = list(set(p + q))
             r = self.gerarConjunto(p, q)
-            frontes = self.fastNondominatedSort(r)
+            frontes = self.fast_non_dominated_sort(r)
             p = []
             for fronte in frontes:
                 self.crowdingDistanceAssignment(fronte)
                 p.extend(fronte)
                 if len(p) >= self.npop:
                     break
-            p = sorted(p, key = lambda el: el.distancia, reverse = True)
+            p = sorted(p, key = lambda el: el.distance, reverse = True)
             p = p[:self.npop]
             q = self.gerarPopulacao(p, self.npop)
             i += 1
@@ -328,25 +328,24 @@ class Nsga2Aspirador(Nsga2):
                 print 'opção "%s" inválida' % (k)
 
     def gerarIndividuo(self, resolucao, nsujeira, nlixeira, ncarga, nagentes):
-        cromossomo = []
-        cromossomo.extend([1 for l in xrange(nsujeira)])
-        cromossomo.extend([2 for l in xrange(nlixeira)])
-        cromossomo.extend([3 for r in xrange(ncarga)])
-        cromossomo.extend([4 for r in xrange(nagentes)])
-        nvazio = resolucao**2 - len(cromossomo)
-        cromossomo.extend([0 for i in xrange(nvazio)])
-        shuffle(cromossomo)
-        individuo = SolucaoAspirador(MIN)
-        individuo.cromossomo = cromossomo
+        chromossome = []
+        chromossome.extend([1 for l in xrange(nsujeira)])
+        chromossome.extend([2 for l in xrange(nlixeira)])
+        chromossome.extend([3 for r in xrange(ncarga)])
+        chromossome.extend([4 for r in xrange(nagentes)])
+        nvazio = resolucao**2 - len(chromossome)
+        chromossome.extend([0 for i in xrange(nvazio)])
+        shuffle(chromossome)
+        individuo = SolutionAspirador(MIN)
+        individuo.chromossome = chromossome
         #individuo.avaliar(resolucao)
-        individuo.objetivos = self.avaliador(individuo.decodificar(self.componentes))
+        individuo.objectives = self.avaliador(individuo.decodificar(self.componentes))
         return individuo
 
     def salvar(self, destino):
         destino = open(destino,'w')
 
-
-    def gerarPopulacaoInicial(self):
+    def gerar_populacao_inicial(self):
         populacao = []
         for i in range(self.npop):
             populacao.append(self.gerarIndividuo(self.resolucao, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
@@ -370,8 +369,8 @@ class Nsga2Aspirador(Nsga2):
             #NOTE: refatore-me!!!!
             novaPopulacao.append(selecionados[i].reproduzir(selecionados[i-1], self.crossoverProb, self.mutacaoProb, self.resolucao, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
         for individuo in novaPopulacao:
-            if individuo.objetivos == None:
-                individuo.objetivos = self.avaliador(individuo.decodificar(self.componentes))
+            if individuo.objectives == None:
+                individuo.objectives = self.avaliador(individuo.decodificar(self.componentes))
         return novaPopulacao
 
     def torneioBinario(self, pop):
