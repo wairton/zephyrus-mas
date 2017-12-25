@@ -1,11 +1,11 @@
 import json
 import math
 import operator
+import random
 import sys
 import time
 
 from enum import Enum
-from random import shuffle, sample, random
 
 from componentes import Componentes
 
@@ -66,11 +66,11 @@ class VaccumCleanerSolution(Solution):
         return clone
 
     def draw(self, destino):
-        resolucao = int(math.sqrt(len(self.chromossome)))
+        resolution = int(math.sqrt(len(self.chromossome)))
         pos = ['_','*', 'u','$','@']
-        for i in range(resolucao):
-            for j in range(resolucao):
-                destino.write(pos[self.chromossome[i*resolucao+j]] + ' ')
+        for i in range(resolution):
+            for j in range(resolution):
+                destino.write(pos[self.chromossome[i*resolution+j]] + ' ')
             destino.write("\n")
         destino.write("\n")
 
@@ -82,7 +82,7 @@ class VaccumCleanerSolution(Solution):
 
     def decodificar(self, componentes):
         decodificado = [0 for i in self.chromossome]
-        for i in xrange(len(decodificado)):
+        for i in range(len(decodificado)):
             gene = self.chromossome[i]
             if gene == 1:
                 decodificado[i] = componentes.adicionar('LIXO',0)
@@ -96,8 +96,8 @@ class VaccumCleanerSolution(Solution):
                 pass #TODO:exceção?
         return decodificado
 
-    def avaliar(self, resolucao): #TODO: o parâmetro resolução é realmente necessário?
-        pos = zip(self.chromossome, [(i,j) for i in range(resolucao) for j in range(resolucao)])
+    def evaluate(self, resolution): #TODO: o parâmetro resolução é realmente necessário?
+        pos = zip(self.chromossome, [(i,j) for i in range(resolution) for j in range(resolution)])
         sujeiras = filter(lambda k:k[0] == 1, pos)
         lixeiras = filter(lambda k:k[0] == 2, pos)
         recargas = filter(lambda k:k[0] == 3, pos)
@@ -105,14 +105,14 @@ class VaccumCleanerSolution(Solution):
         dlixeira = 0
         drecarga = 0
         for n, pos in sujeiras:
-            aux = resolucao**2 #valor maior que o máximo
+            aux = resolution**2 #valor maior que o máximo
             #NOTE: poderiam ser feitas com min(map())
             for n2, posl in lixeiras:
                 atual = self.distanciaM(pos,posl)
                 if atual < aux:
                     aux = atual
             dlixeira += aux
-            aux = resolucao**2 #valor maior que o máximo
+            aux = resolution**2 #valor maior que o máximo
             for n2, posl in recargas:
                 atual = self.distanciaM(pos,posl)
                 if atual < aux:
@@ -120,22 +120,21 @@ class VaccumCleanerSolution(Solution):
             drecarga += aux
         self.objectives = (dlixeira, drecarga)
 
-    def reproduzir(self, outro, crossoverProb, mutationProb, resolucao, nsujeira, nlixeira, ncarga, nagente):
-        novoIndividuo = self.crossover(outro, crossoverProb, resolucao, nsujeira, nlixeira, ncarga, nagente)
-        #print novoIndividuo
-        ocorreuMutacao = novoIndividuo.mutation(mutationProb)
+    def reproduction(self, outro, crossover_prob, mutation_prob, resolution, nsujeira, nlixeira, ncarga, nagente):
+        novoIndividuo = self.crossover(outro, crossover_prob, resolution, nsujeira, nlixeira, ncarga, nagente)
+        ocorreuMutacao = novoIndividuo.mutation(mutation_prob)
         if ocorreuMutacao:
             novoIndividuo.objectives = None
             novoIndividuo.cloned = False
         return novoIndividuo
 
-    def crossover(self, outro, crossoverProb, resolucao, nsujeira, nlixeira, ncarga, nagente):
-        if random() < crossoverProb:
+    def crossover(self, outro, crossover_prob, resolution, nsujeira, nlixeira, ncarga, nagente):
+        if random.random() < crossover_prob:
             novoIndividuo = VaccumCleanerSolution(SolutionType.MIN)
-            pontoCrossover = resolucao ** 2 / 2
+            pontoCrossover = resolution ** 2 / 2
             novoIndividuo.chromossome.extend(self.chromossome[:pontoCrossover])
             posicoes = {}
-            maximos = (resolucao ** 2 - (nsujeira + nlixeira + ncarga + nagente), nsujeira, nlixeira, ncarga, nagente)
+            maximos = (resolution ** 2 - (nsujeira + nlixeira + ncarga + nagente), nsujeira, nlixeira, ncarga, nagente)
             for i in range(5):
                 posicoes[i] = 0
             for gene in novoIndividuo.chromossome:
@@ -145,7 +144,7 @@ class VaccumCleanerSolution(Solution):
                     novoIndividuo.chromossome.append(gene)
                     posicoes[gene] += 1
             for gene in outro.chromossome[:pontoCrossover]:
-                if len(novoIndividuo.chromossome) == resolucao**2:
+                if len(novoIndividuo.chromossome) == resolution**2:
                     break
                 if posicoes[gene] < maximos[gene]:
                     novoIndividuo.chromossome.append(gene)
@@ -153,12 +152,12 @@ class VaccumCleanerSolution(Solution):
             return novoIndividuo
         return self.clone()
 
-    def mutation(self, mutationProb):
+    def mutation(self, mutation_prob):
         ocorreuMutacao = False
-        for i in xrange(len(self.chromossome)):
-            if random() < mutationProb:
+        for i in range(len(self.chromossome)):
+            if random.random() < mutation_prob:
                 ocorreuMutacao = True
-                outro = sample(xrange(len(self.chromossome)), 1)
+                outro = random.sample(range(len(self.chromossome)), 1)
                 #NOTE: e se outro == i?
                 self.chromossome[i], self.chromossome[outro] = self.chromossome[outro], self.chromossome[i]
         return ocorreuMutacao
@@ -170,7 +169,6 @@ class Nsga2(object):
         self.maxite = maxite
         self.mainlog = None
         self.poplog = None
-
 
     #retorna uma lista de frontes
     def fast_non_dominated_sort(self, populacao):
@@ -222,37 +220,34 @@ class Nsga2(object):
                 pontos[i].distance += (pontos[i+1].objectives[m] - pontos[i-1].objectives[m])
                 i += 1
 
-    def gerar_populacao_inicial(self):
+    def generate_initial_population(self):
         raise NotImplementedError
 
-    def gerarPopulacao(self):
+    def generate_population(self):
         raise NotImplementedError
 
-    def gravarPopulacao(self, pid, populacao):
-        log = open(self.poplog,'a')
-        log.write(str(pid) + '\n')
-        for individuo in populacao:
-            for objetivo in individuo.objectives:
-                log.write(str(objetivo)+' ')
-            log.write('\n')
-        log.close()
+    def store_population(self, pid, population):
+        with open(self.poplog, 'a') as log:
+            log.write(str(pid) + '\n')
+            for individual in population:
+                for objective in individual.objectives:
+                    log.write(str(objective) + ' ')
+                log.write('\n')
 
     #TODO: mudar o nome para unir populações?
     def gerarConjunto(self, pop1, pop2):
         extra = filter(lambda p:p.cloned==False, pop2)
-        return pop1+extra
-
+        return pop1 + extra
 
     def main_loop(self):
-        p = self.gerar_populacao_inicial()
-        self.gravarPopulacao(0, p)
+        p = self.generate_initial_population()
+        self.store_population(0, p)
         q = []
         i = 0
         while i < self.maxite:
             log = open(self.mainlog,"a")
             log.write("\nGeração %s\n" % (i+1))
             log.close()
-            #print "Geração %s" % (i+1),
             print >> sys.stderr, '.',
             #r = list(set(p + q))
             r = self.gerarConjunto(p, q)
@@ -265,20 +260,19 @@ class Nsga2(object):
                     break
             p = sorted(p, key = lambda el: el.distance, reverse = True)
             p = p[:self.npop]
-            q = self.gerarPopulacao(p, self.npop)
+            q = self.generate_population(p, self.npop)
             i += 1
-            self.gravarPopulacao(i, p)
+            self.store_population(i, p)
         return p
-
 
 
 class Nsga2Aspirador(Nsga2):
     def __init__(self, npop, maxite):
         super(Nsga2Aspirador, self).__init__(npop, maxite)
-        self.crossoverProb = 0.0
-        self.mutationProb = 0.0
+        self.crossover_prob = 0.0
+        self.mutation_prob = 0.0
         self.nagentes = 0
-        self.resolucao = 0
+        self.resolution = 0
         self.nsujeira = 0
         self.nlixeira = 0
         self.ncarga = 0
@@ -310,7 +304,7 @@ class Nsga2Aspirador(Nsga2):
             if k == 'agentes':
                 self.nagentes = valor
             elif k == 'resolucao':
-                self.resolucao = valor
+                self.resolution = valor
             elif k == 'sujeira':
                 self.nsujeira = valor
             elif k == 'lixeira':
@@ -318,61 +312,49 @@ class Nsga2Aspirador(Nsga2):
             elif k == 'carga':
                 self.ncarga = valor
             elif k == 'crossover':
-                self.crossoverProb = valor
+                self.crossover_prob = valor
             elif k == 'mutacao':
                 self.mutation = valor
             else:
                 print 'opção "%s" inválida' % (k)
 
-    def gerarIndividuo(self, resolucao, nsujeira, nlixeira, ncarga, nagentes):
+    def generate_individual(self, resolution, nsujeira, nlixeira, ncarga, nagentes):
         chromossome = []
-        chromossome.extend([1 for l in xrange(nsujeira)])
-        chromossome.extend([2 for l in xrange(nlixeira)])
-        chromossome.extend([3 for r in xrange(ncarga)])
-        chromossome.extend([4 for r in xrange(nagentes)])
-        nvazio = resolucao**2 - len(chromossome)
-        chromossome.extend([0 for i in xrange(nvazio)])
-        shuffle(chromossome)
+        chromossome.extend(1 for l in range(nsujeira))
+        chromossome.extend(2 for l in range(nlixeira))
+        chromossome.extend(3 for r in range(ncarga))
+        chromossome.extend(4 for r in range(nagentes))
+        nvazio = resolution ** 2 - len(chromossome)
+        chromossome.extend(0 for i in range(nvazio))
+        random.shuffle(chromossome)
         individuo = VaccumCleanerSolution(SolutionType.MIN)
         individuo.chromossome = chromossome
-        #individuo.avaliar(resolucao)
         individuo.objectives = self.avaliador(individuo.decodificar(self.componentes))
         return individuo
 
     def salvar(self, destino):
         destino = open(destino,'w')
 
-    def gerar_populacao_inicial(self):
-        populacao = []
-        for i in range(self.npop):
-            populacao.append(self.gerarIndividuo(self.resolucao, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
+    def generate_initial_population(self, log=True):
+        population = []
+        for _ in range(self.npop):
+            population.append(self.generate_individual(self.resolution, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
+        if log:
+            Nsga2Aspirador.draw(population, 'inicial.txt')
+        return population
 
-        Nsga2Aspirador.draw(populacao, 'inicial.txt')
-        return populacao
-
-    def gerarPopulacao(self, populacaoAtual, tamanho):
-        """print 'Hora de gerar uma nova população!'
-        print 'Populacao atual'
-        for i in populacaoAtual:
-                print i"""
-        selecionados = []
-        for i in xrange(tamanho):
-            selecionados.append(self.torneioBinario(populacaoAtual))
-        #print 'Eis os selecionados:'
-        #for i in selecionados:
-        #       print i
-        novaPopulacao = []
-        for i in range(tamanho-1, -1,-1):
+    def generate_population(self, current_population, size):
+        selected = [self.binary_tournament(current_population) for _ in range(size)]
+        new_population = []
+        for i in range(size - 1, -1, -1):
             #NOTE: refatore-me!!!!
-            novaPopulacao.append(selecionados[i].reproduzir(selecionados[i-1], self.crossoverProb, self.mutationProb, self.resolucao, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
-        for individuo in novaPopulacao:
+            new_population.append(selected[i].reproduction(selected[i - 1], self.crossover_prob, self.mutation_prob, self.resolution, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
+        for individuo in new_population:
             if individuo.objectives == None:
                 individuo.objectives = self.avaliador(individuo.decodificar(self.componentes))
-        return novaPopulacao
+        return new_population
 
-    def torneioBinario(self, pop):
-        a, b = sample(xrange(len(pop)),2)
-        if pop[a].fitness >= pop[b].fitness: #deveria haver outra regra para desempate?
-            return pop[a]
-        else:
-            return pop[b]
+    def binary_tournament(self, pop):
+        a, b = random.sample(range(len(pop)), 2)
+        # TODO: should exists another rule for tiebreak?
+        return pop[a] if pop[a].fitness >= pop[b].fitness else pop[b]
