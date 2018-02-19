@@ -1,48 +1,70 @@
 #!/usr/bin/python
-#-*-coding:utf-8-*-
 #This work is under LGPL license, see the LICENSE.LGPL file for further details.
 
-import time
-import sys
 import pprint
+import sys
+import time
 
 import zmq
 
-from core.ambiente import Ambiente
+from core.environment import Environment
+from core.message import Message
 
 
-class AmbienteAspirador(Ambiente):
-    def __init__(self, mid, configEnd, configCom):
-        super(AmbienteAspirador, self).__init__(mid, configEnd, configCom)
+class EnvironmentMessenger:
+    def __init__(self, sender: str):
+        self.sender = sender
+
+    def build_cleaned_message(self):
+        return Message(self.sender, "CLEANED")
+
+    def build_stopped_messsage(self):
+        return Message(self.sender, "STOPPED")
+
+    def build_nop_messsage(self):
+        return Message(self.sender, "NOP")
+
+    def build_deposited_messsage(self):
+        return Message(self.sender, "DEPOSITED")
+
+
+
+
+class VacuumEnvironment(Environment):
+    def __init__(self, mid, participants_config, components_config):
+        super().__init__(mid, participants_config, components_config)
 
     def run(self):
-        contexto = zmq.Context()
-        self.socketReceive = contexto.socket(zmq.PULL)
+        context = zmq.Context()
+        self.socket_receive = contexto.socket(zmq.PULL)
 
-        self.socketReceive.bind(self.enderecos.endereco('environment'))
-        self.socketSend = contexto.socket(zmq.PUSH)
-        self.socketSend.connect(self.enderecos.endereco('monitor'))
-        self.socketTestador = contexto.socket(zmq.SUB)
-        self.socketTestador.connect(self.enderecos.endereco('tester_par'))
-        pprint.pprint(self.enderecos.get('environment'))
-        self.socketTestador.setsockopt(zmq.SUBSCRIBE, str(self.enderecos.get('environment')['alias']))
-        print 'Ambiente rodando!!!', time.time()
-        self.mainLoop()
+        self.messenger = EnvironmentMessenger('environment')
+        self.socket_receive.bind(self.participants.address('environment'))
+        self.socket_send = contexto.socket(zmq.PUSH)
+        self.socket_send.connect(self.participants.address('monitor'))
+        self.socket_tester = contexto.socket(zmq.SUB)
+        self.socket_tester.connect(self.participants.address('tester_par'))
+        # FIXME
+        self.socket_tester.setsockopt(zmq.SUBSCRIBE, str(self.participants.get('environment')['alias']))
+        # TODO add proper logging
+        # print 'Ambiente rodando!!!', time.time()
+        self.main_loop()
 
-    def mainLoop(self):
-        print "Ambiente está pronto (%s)" % (self.id)
+    def main_loop(self):
+        # TODO add proper logging
+        # print "Ambiente está pronto (%s)" % (self.id)
         while True:
-            msg = self.socketTestador.recv()
+            msg = self.socket_tester.recv()
             msg = msg[4:].split(',')
             if len(msg) > 2:    #comprimento menor indica encerramento.
                 self.reconstruir(map(int, msg[0].split()), int(msg[1]))
                 self.adicionarAgente(int(msg[2]), int(msg[3]), int(msg[4]))
             else:
                 print 'opa!!!!!!!!!!!'
-            msg = self.socketReceive.recv()
+            msg = self.socket_receive.recv()
             if msg == "@@@":
                 while True:
-                    msg = self.socketReceive.recv() #apenas um feddback (ack)
+                    msg = self.socket_receive.recv() #apenas um feddback (ack)
                     requisicao = msg.split()
                     agid = int(requisicao[0])
                     if requisicao[2] == 'perceber':
@@ -57,40 +79,40 @@ class AmbienteAspirador(Ambiente):
                         acao = self.depositar(agid)
                     elif requisicao[2] == 'parar':
                         acao = self.parar(agid)
-                        if len(self.posAgentes) == 0:
+                        if len(self.agent_positions) == 0:
                             msg = "%s %s %s" % (self.id, agid, acao)
-                            self.socketSend.send(msg)
+                            self.socket_send.send(msg)
                             msg = "%s %s %s" % (self.id, -1, "###")
-                            self.socketSend.send(msg)
-                            self.reiniciarMemoria()
+                            self.socket_send.send(msg)
+                            self.restart_memory()
                             break
                         #TODO: como o ambiente para?
                     else:
                         raise "ambiente: recebeu mensagem desconhecida"
                         pass
                     msg = "%s %s %s" % (self.id, agid, acao)
-                    self.socketSend.send(msg)
+                    self.socket_send.send(msg)
             elif msg == "###":
                 print "Ambiente recebeu mensagem de finalização de atividades."
                 break
             else:
                 pass
 
-    def reiniciarMemoria(self):
-        self.estrutura = []
-        self.posAgentes = {}
+    def restart_memory(self):
+        self.places = []
+        self.agent_positions = {}
 
     def reconstruir(self, novaEstrutura, resolucao):
         nlinhas = ncolunas = resolucao
         for i in xrange(nlinhas):
             de, ate = ncolunas * i, ncolunas * (i+1)
-            self.estrutura.append(novaEstrutura[de:ate])
+            self.places.append(novaEstrutura[de:ate])
         self.nlinhas, self.ncolunas = nlinhas, ncolunas
 
     def adicionarAgente (self, idAgente, x, y):
         #TODO: checar se a posicao do agente é válida
-        self.posAgentes[idAgente]  = (x, y)
-        self.estrutura[x][y] = self.componentes.adicionarVarios(['AG03','AG'], self.estrutura[x][y])
+        self.agent_positions[idAgente]  = (x, y)
+        self.places[x][y] = self.componentes.adicionarVarios(['AG03','AG'], self.estrutura[x][y])
 
     def mover (self, iden, direcao):
         if direcao < 0 or direcao > 3:
@@ -100,66 +122,64 @@ class AmbienteAspirador(Ambiente):
         else:
             #não considera o caso em que o agente sai dos limites...
             x, y = None, None
-            if iden in self.posAgentes.keys():
-                x, y = self.posAgentes[iden]
+            if iden in self.agent_positions.keys():
+                x, y = self.agent_positions[iden]
             if direcao == 0:
-                if self.componentes.checar('PAREDEN', self.estrutura[x][y]) or self.componentes.checar('AG', self.estrutura[x-1][y]):
+                if self.componentes.checar('PAREDEN', self.places[x][y]) or self.componentes.checar('AG', self.estrutura[x - 1][y]):
                     return "colidiu"
-                self.posAgentes[iden] = x-1,y
-                self.estrutura[x-1][y] = self.componentes.adicionar('AG', self.estrutura[x-1][y])
+                self.agent_positions[iden] = x-1,y
+                self.places[x-1][y] = self.componentes.adicionar('AG', self.estrutura[x-1][y])
             elif direcao == 1:
-                if self.componentes.checar('PAREDEL', self.estrutura[x][y]) or self.componentes.checar('AG', self.estrutura[x][y+1]):
+                if self.componentes.checar('PAREDEL', self.places[x][y]) or self.componentes.checar('AG', self.estrutura[x][y+1]):
                     return "colidiu"
-                self.posAgentes[iden] = x,y+1
-                self.estrutura[x][y+1] = self.componentes.adicionar('AG', self.estrutura[x][y+1])
+                self.agent_positions[iden] = x,y+1
+                self.places[x][y+1] = self.componentes.adicionar('AG', self.estrutura[x][y+1])
             elif direcao == 2:
-                if self.componentes.checar('PAREDES', self.estrutura[x][y]) or self.componentes.checar('AG', self.estrutura[x+1][y]):
+                if self.componentes.checar('PAREDES', self.places[x][y]) or self.componentes.checar('AG', self.estrutura[x+1][y]):
                     return "colidiu"
-                self.posAgentes[iden] = x+1,y
-                self.estrutura[x+1][y] = self.componentes.adicionar('AG', self.estrutura[x+1][y])
+                self.agent_positions[iden] = x+1,y
+                self.places[x+1][y] = self.componentes.adicionar('AG', self.estrutura[x+1][y])
             elif direcao == 3:
-                if self.componentes.checar('PAREDEO', self.estrutura[x][y]) or self.componentes.checar('AG', self.estrutura[x][y-1]):
+                if self.componentes.checar('PAREDEO', self.places[x][y]) or self.componentes.checar('AG', self.estrutura[x][y-1]):
                     return "colidiu"
-                self.posAgentes[iden] = x,y-1
-                self.estrutura[x][y-1] = self.componentes.adicionar('AG', self.estrutura[x][y-1])
+                self.agent_positions[iden] = x,y-1
+                self.places[x][y-1] = self.componentes.adicionar('AG', self.estrutura[x][y-1])
 
-            self.estrutura[x][y] = self.componentes.remover('AG',self.estrutura[x][y])
+            self.places[x][y] = self.componentes.remover('AG',self.estrutura[x][y])
             return "moveu"
 
-    def limpar (self, iden):
-        x, y = self.posAgentes[iden]
-        if self.componentes.checar('LIXO', self.estrutura[x][y]):
-            self.estrutura[x][y] = self.componentes.remover('LIXO',self.estrutura[x][y])
+    def clean(self, iden):
+        x, y = self.agent_positions[iden]
+        if self.componentes.checar('LIXO', self.places[x][y]):
+            self.places[x][y] = self.componentes.remover('LIXO',self.estrutura[x][y])
             return "limpou"
         else:
             return 'nop'
 
     def checar(self, iden):
-        x, y = self.posAgentes[iden]
-        return self.estrutura[x][y]
+        x, y = self.agent_positions[iden]
+        return self.places[x][y]
 
     def recarregar(self, agid):
-        x, y = self.posAgentes[agid]
-        if self.componentes.checar('RECARGA', self.estrutura[x][y]):
-            return "recarregou"
-        else:
-            return "nop"
+        x, y = self.agent_positions[agid]
+        if self.componentes.checar('RECARGA', self.places[x][y]):
+            return self.messenger
+        return self.messenger.build_nop_messsage()
 
     def depositar(self, agid):
         ""
-        x, y = self.posAgentes[agid]
-        if self.componentes.checar('LIXEIRA', self.estrutura[x][y]):
+        x, y = self.agent_positions[agid]
+        if self.componentes.checar('LIXEIRA', self.places[x][y]):
             return "depositou"
-        else:
-            return "nop"
+        return self.messenger.build_nop_messsage()
 
     def parar(self,agid):
-        del self.posAgentes[agid]
-        return "parou"
+        del self.agent_positions[agid]
+        return self.messenger.build_stopped_messsage()
 
     def draw(self):
         ret = ""
-        for linha in self.estrutura:
+        for linha in self.places:
             for item in linha:
                 info = filter(lambda k: self.componentes.checar(k, item), ['LIXEIRA', 'LIXO', 'RECARGA','AG'])
                 char = ""
@@ -182,7 +202,7 @@ class AmbienteAspirador(Ambiente):
 
     def drawFile(self, filename, mode):
         log = open(filename, mode)
-        for linha in self.estrutura:
+        for linha in self.places:
             for item in linha:
                 info = filter(lambda k: self.componentes.checar(k, item), ['LIXEIRA', 'LIXO', 'RECARGA','AG'])
                 char = ""
@@ -205,5 +225,5 @@ class AmbienteAspirador(Ambiente):
 
 
 if __name__ == '__main__':
-    ambiente = AmbienteAspirador(0, *sys.argv[1:])
-    ambiente.start()
+    environment = VacuumEnvironment(0, *sys.argv[1:])
+    environment.start()

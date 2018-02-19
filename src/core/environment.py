@@ -1,19 +1,21 @@
-#-*-coding:utf-8-*-
-from sys import exit
 from multiprocessing import Process
+
 import zmq
+
 from core.componentes import Componentes
-from core.enderecos import Enderecos
+from core.address import Participants
 
 
-class Ambiente(Process):
-    def __init__(self, mid, configEnd, configCom):
-        super(Ambiente, self).__init__()
-        self.estrutura = [] #NOTE: estrutura no lugar de cenário também não ficou legal
+class Environment(Process):
+    def __init__(self, mid, participants_config, components_config):
+        super().__init__()
+        # TODO: give a better name
+        self.places = []
         self.posAgentes = {}
         self.id = mid
-        self.enderecos = Enderecos(configEnd)
-        self.componentes = Componentes(configCom)
+        self.participants = Participants(participants_config)
+        self.component_manager = ComponentManager(components_config)
+        self.components = self.component_manager.enum
 
     def run(self):
         raise NotImplementedError
@@ -31,10 +33,10 @@ class Ambiente(Process):
 
         for linha in linhas:
             if linha[-1] == '\n': linha = linha[:-1]    #pensar numa maneira melhor... #em ruby e.chomp
-            self.estrutura.append(map(int, linha.split()))
+            self.places.append(map(int, linha.split()))
         #TODO: verificar  a necessidade de fechar o arquivo(que arquivo? =) )
         #arq.close()
-        self.nlinhas, self.ncolunas = len(self.estrutura), len(self.estrutura[0])
+        self.nlinhas, self.ncolunas = len(self.places), len(self.locations[0])
         self.componentes = componentes
 
     def carregarArray(self, array, componentes):
@@ -42,7 +44,7 @@ class Ambiente(Process):
         Carrega o ambiente a partir de uma lista.
         Os dois primeiros valores são nlinhas e ncolunas
         """
-        self.estrutura = []
+        self.places = []
         self.posAgentes = {} #NOTE: esse comando deveria ser aqui?
         array = array.split()
         nlinhas = int(array[0])
@@ -50,19 +52,19 @@ class Ambiente(Process):
         for i in range(nlinhas):
             de, ate = 2 + ncolunas * i, 2 + ncolunas * (i+1)
             #TODO: Testar, essa linha!!!
-            self.estrutura.append(map(int, array[de:ate]))
+            self.places.append(map(int, array[de:ate]))
         self.nlinhas, self.ncolunas = nlinhas, ncolunas
         self.componentes = componentes
 
-    def imprimir (self):
-        print self.estrutura
+    def imprimir(self):
+        print self.places
 
-    def adicionarAgente (self, idAgente, x, y):
+    def adicionarAgente(self, idAgente, x, y):
         #TODO: checar se a posicao do agente é válida
         self.posAgentes[idAgente]  = (x, y)
         return len(self.posAgentes ) - 1
 
-    def imprimirAgente (self, idAgente = None):
+    def imprimirAgente(self, idAgente = None):
         """
         Envia para saída padrão informações sobre o agente indicado
         por idAgente.
