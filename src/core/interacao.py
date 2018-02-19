@@ -1,8 +1,9 @@
 #-*-coding:utf-8-*-
 from multiprocessing import Process
+from math import log
+
 import zmq
 import time
-from math import log
 
 #nome provisório, a classe representa o conjunto de interações
 class Interatividade(Process):
@@ -20,7 +21,7 @@ class Interatividade(Process):
     def log(self):
         return self._log[:]
 
-    def pronto(self):
+    def ready(self):
         while True:
             #print 'interação esperando...'
             msgTestador = self.pipeTestador.recv().split()
@@ -97,7 +98,7 @@ class Interatividade(Process):
             obj2 = fatorx * (100.0 / 2 ** (log(consumoMax/consumoMin,2.5)))
 
         print (obj1, obj2)
-        self.pipeTestador.send("%s %s" %(obj1,obj2))
+        self.pipeTestador.send("%s %s" % (obj1, obj2))
 
     def run(self):
         print 'Interacao rodando!!!'
@@ -110,7 +111,7 @@ class Interatividade(Process):
             self.socketsParticipantes[chave] = contexto.socket(zmq.PUSH)
             self.socketsParticipantes[chave].connect(self.participantes[chave])
         #time.sleep(0.4) #TODO: checar se é necessário
-        self.pronto()
+        self.ready()
 
     def adicionarParticipante(self, pid, endereco):
         """
