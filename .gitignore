@@ -4,3 +4,5 @@ env_zephyrus
 *.swp
 *.out
 *.o
+src/build
+explore
