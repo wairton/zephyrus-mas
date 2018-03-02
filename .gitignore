@@ -7,3 +7,5 @@ env_zephyrus
 src/build
 explore
 .tox
+.pytest_cache
+zephyrus.egg-info
