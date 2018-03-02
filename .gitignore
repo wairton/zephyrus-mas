@@ -6,3 +6,4 @@ env_zephyrus
 *.o
 src/build
 explore
+.tox
