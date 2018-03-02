@@ -1,6 +1,4 @@
 #!/usr/bin/python
-#This work is under LGPL license, see the LICENSE.LGPL file for further details.
-
 import pprint
 import sys
 import time
