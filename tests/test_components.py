@@ -70,6 +70,24 @@ def test_component_set_contains(basic_enum, all_items):
     assert basic_enum.C in all_items
 
 
+def test_component_set_add():
+    c1 = ComponentSet(5) # 101
+    c2 = ComponentSet(3) # 011
+    assert (c1 + c2).value == 7
+
+
+def test_component_set_sub(all_items, basic_enum):
+    res = all_items - basic_enum.A
+    assert basic_enum.A not in res
+    assert basic_enum.B in res
+    assert basic_enum.C in res
+
+
+def test_component_set_len(all_items, basic_enum):
+    res = all_items - basic_enum.A
+    assert len(res) == 2
+
+
 def test_component_enum_get_value_for(basic_enum):
     assert basic_enum.get_value_for('b') == 2
     with pytest.raises(KeyError):
