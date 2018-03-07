@@ -136,7 +136,7 @@ class ComponentEnum:
             value <<= 1
 
     def get_value_for(self, name):
-        return self.name_value[name]
+        return self.name_value[name.upper()]
 
     def get_name_for(self, value):
         return self.value_name[value]
