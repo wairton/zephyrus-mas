@@ -156,7 +156,7 @@ class ComponentManager:
 
     @classmethod
     def get_component_enum(cls, filename):
-        return cls(filename).enum
+        return cls.from_filename(filename).enum
 
     @classmethod
     def from_component_enum(cls, enum):
