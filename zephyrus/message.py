@@ -13,3 +13,8 @@ class Message:
 
     def __repr__(self):
         return "Message: %s" % self
+
+
+class Messenger:
+    def __init__(self, sender: str):
+        self.sender = sender
