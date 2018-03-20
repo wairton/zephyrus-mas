@@ -3,6 +3,15 @@ from multiprocessing import Process
 import zmq
 
 from zephyrus.addresses import Participants as SimulationParticipants
+from zephyrus.message import Messenger
+
+
+class InteractionMessenger(Messenger):
+    no_parameter_messages = {
+        'start': 'START',
+        'reset': 'RESET',
+        'finish': 'FINISH'
+    }
 
 
 #nome provisório, a classe representa o conjunto de interações
@@ -14,40 +23,7 @@ class Interaction(Process):
         self.participant_sockets = {}
         self.tester_alias = tester_alias
         self._log = []
-
-    def ready(self):
-        while True:
-            #print 'interação esperando...'
-            msg_testador = self.pipe_testador.recv().split()
-            print 'oi eu sou testador, recebi a mensagem', msg_testador
-            if msg_testador[0] == "terminar":
-                print "Interacao Encerrando"
-                for pid in self.participantes.keys():
-                    self.sockets_participantes[pid].send("###")
-                break
-            if msg_testador[0] == "iniciar":
-                resolucao, ncargas = None, None
-                if len(msg_testador) > 1:
-                    resolucao = int(msg_testador[1])
-                    ncargas = int(msg_testador[2])
-                    nsujeiras = int(msg_testador[3])
-                self._log = []
-                for pid in self.participantes.keys():
-                    self.sockets_participantes[pid].send("@@@")
-                while True:
-                    mmsg = self.socket_receive.recv()
-#					print 'interação: recebi', mmsg, len(mmsg)
-                    msg = mmsg.split()
-                    de, para, texto = int(msg[0]), int(msg[1]), msg[2:] #NOTE: o último elemento NÃO é uma string
-                    self._log.append((de,para,texto))
-                    if para == -1:
-                        # TODO send result to tester
-                        break
-                    #sockets_participantes[para].send("%s %s" % (de, texto[0]))
-                    self.sockets_participantes[para].send(mmsg)
-            elif msg_testador[0] == '':
-                pass
-
+        self.messenger = InteractionMessenger('interaction')
     def run(self):
         # TODO add proper logging
         # print 'Interacao rodando!!!'
@@ -66,6 +42,43 @@ class Interaction(Process):
         # time.sleep(0.4) #TODO: check if this is necessary
         self.ready()
 
+    def ready(self):
+        while True:
+            # TODO APL
+            msg = self.socket_tester.recv()
+            content = msg['content']
+            if content == "FINISH":
+                self.broadcast(self.messenger.build_finish_message())
+                break
+            elif content == "START":
+                self.handle_start_message(content)
+            else:
+                # log error, unknown message
+                pass
+
+    def handle_start_message(self, content):
+        resolucao, ncargas = None, None
+        if len(msg_testador) > 1:
+            resolucao = int(msg_testador[1])
+            ncargas = int(msg_testador[2])
+            nsujeiras = int(msg_testador[3])
+        self._log = []
+        self.broadcast(self.messenger.build_reset_message())
+        self.mainloop()
+
+    def mainloop(self):
+        while True:
+            mmsg = self.socket_receive.recv()
+            # print 'interação: recebi', mmsg, len(mmsg)
+            msg = mmsg.split()
+            de, para, texto = int(msg[0]), int(msg[1]), msg[2:] #NOTE: o último elemento NÃO é uma string
+            self._log.append((de,para,texto))
+            if para == -1:
+                # TODO send result to tester
+                break
+            #sockets_participantes[para].send("%s %s" % (de, texto[0]))
+            self.sockets_participantes[para].send(mmsg)
+
     def add_participant(self, pid: int, address: str):
         # TODO apl
         # print 'adcionou participante', pid, 'em', endereco
@@ -73,3 +86,8 @@ class Interaction(Process):
 
     def remove_particioant(self, pid: int):
         del self.participants[pid]
+
+    def broadcast(self, message):
+        raw = str(message)
+        for pid in self.participants:
+            self.sockets_participantes[pid].send(raw)
