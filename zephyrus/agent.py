@@ -13,7 +13,6 @@ class Agent(abc.ABC, Process):
         super().__init__()
         self.id = ag_id
         # communication
-        self.messenger = AgentMessenger("agent <{}>".format(ag_id))
         participants = Participants(address_config)
         self.address = participants.address('agent')
         self.monitor_address = participants.address('monitor')
