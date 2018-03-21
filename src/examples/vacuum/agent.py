@@ -8,27 +8,21 @@ from random import choice
 
 import zmq
 
-from core.components import ComponentManager, ComponentSet
 from core.address import Participants
+from core.components import ComponentManager, ComponentSet
 from core.exceptions import ZephyrusException
-from core.message import Message
+from core.message import Message, Messenger, MessengerMeta
 
 
-class AgentMessenger:
-    def __init__(self, sender: str):
-        self.sender = sender
-
-    def build_clean_message(self):
-        return Message(self.sender, "CLEAN")
-
-    def build_recharge_message(self):
-        return Message(self.sender, "RECHARGE")
+class AgentMessenger(Messenger, metaclass=MessengerMeta):
+    no_parameter_messages = {
+        'clean': 'CLEAN',
+        'recharge': 'RECHARGE',
+        'stop': 'STOP'
+    }
 
     def build_move_message(self, destination):
         return Message(self.sender, "MOVE %s" % destination)
-
-    def build_stop_messsage(self):
-        return Message(self.sender, "STOP")
 
 
 class Plan(enum.Enum):
