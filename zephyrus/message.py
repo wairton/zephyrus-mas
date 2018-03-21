@@ -1,11 +1,11 @@
-import abc
 import json
 
 
 class Message:
-    def __init__(self, sender, content):
+    def __init__(self, sender, message_type, content=None):
         self.message = {
             'sender': sender,
+            'type': message_type,
             'content': content
         }
 
@@ -18,6 +18,10 @@ class Message:
     @property
     def sender(self):
         return self.message['sender']
+
+    @property
+    def type(self):
+        return self.message['type']
 
     @property
     def content(self):
