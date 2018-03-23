@@ -4,7 +4,7 @@ from multiprocessing import Process
 
 import zmq
 
-from zephyrus.address import Participants
+from zephyrus.addresses import Participants
 from zephyrus.components import ComponentManager
 
 
@@ -22,12 +22,12 @@ class Agent(abc.ABC, Process):
         if component_config is not None:
             self.components = c = ComponentManager(component_config).enum
 
-    @abstractmethod
+    @abc.abstractmethod
     def perceive(self, perceived_data):
         return self.act(perceived_data)
 
     def run(self):
-        logging.debug('Agent {} is running.'.format(self.ag_id))
+        logging.debug('Agent {} is running.'.format(self.id))
         context = zmq.Context()
         self.socket_receive = context.socket(zmq.PULL)
         self.socket_receive.bind(self.address)
@@ -36,9 +36,9 @@ class Agent(abc.ABC, Process):
         self.ready()
 
     def ready(self):
-        logging.info('Agent {} is ready.'.format(self.ag_id))
+        logging.info('Agent {} is ready.'.format(self.id))
         while True:
-            msg = self.socket_receive.recv()
+            msg = self.socket_receive.recv_string()
             if msg == "@@@":
                 self.mainloop()
             elif msg == "###":
@@ -47,10 +47,10 @@ class Agent(abc.ABC, Process):
             else:
                 logging.warning("Agente %s recebeu mensagem inválida." % (self.id))
 
-    @abstractmethod
+    @abc.abstractmethod
     def mainloop(self):
         pass
 
-    @abstractmethod
+    @abc.abstractmethod
     def act(self, perceived):
         pass
