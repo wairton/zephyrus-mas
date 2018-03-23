@@ -15,6 +15,15 @@ class Message:
     def __repr__(self):
         return "Message: %s" % self
 
+    @classmethod
+    def from_json(self, json_dict):
+        # TODO: missing attributes parsing
+        return Message(json_dict['sender'], json_dict['type'], json_dict['content'])
+
+    @classmethod
+    def from_string(self, json_str):
+        return Message.from_json(json.loads(json_str))
+
     @property
     def sender(self):
         return self.message['sender']
