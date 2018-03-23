@@ -6,6 +6,7 @@ import zmq
 
 from zephyrus.addresses import Participants
 from zephyrus.components import ComponentManager
+from zephyrus.message import Message
 
 
 class Agent(abc.ABC, Process):
@@ -38,10 +39,10 @@ class Agent(abc.ABC, Process):
     def ready(self):
         logging.info('Agent {} is ready.'.format(self.id))
         while True:
-            msg = self.socket_receive.recv_string()
-            if msg == "@@@":
+            msg = Message.from_string(self.socket_receive.recv_string())
+            if msg.type == 'START':
                 self.mainloop()
-            elif msg == "###":
+            elif msg.type == 'STOP':
                 logging.info("Agente %s recebeu mensagem de finalização de atividades." % (self.id))
                 break
             else:
