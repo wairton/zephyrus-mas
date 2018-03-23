@@ -1,40 +1,57 @@
 import abc
+import logging
 from multiprocessing import Process
+
+import zmq
 
 from zephyrus.addresses import Participants
 from zephyrus.components import ComponentManager
+from zephyrus.message import Message
 
 
 class Environment(abc.ABC, Process):
-    def __init__(self, mid, participants_config, components_config):
+    def __init__(self, mid, participants_config, components_config=None):
         super().__init__()
         # TODO: give a better name
         self.places = []
-        self.posAgentes = {}
+        self.agent_positions = {}
         self.id = mid
         self.participants = Participants(participants_config)
-        self.components = ComponentManager(components_config).enum
+        if components_config is not None:
+            self.components = ComponentManager(components_config).enum
+
+    def run(self):
+        # TODO add log
+        context = zmq.Context()
+        self.socket_receive = context.socket(zmq.PULL)
+        self.socket_receive.bind(self.participants.address('environment'))
+        self.socket_send = context.socket(zmq.PUSH)
+        # connect with interaction
+        self.socket_send.connect(self.participants.address('monitor'))
+        self.ready()
+        # time.sleep(0.4) # TODO: checar se é necessário
+
+    def ready(self):
+        logging.info('Environmnent {} is ready.'.format(self.id))
+        while True:
+            msg = Message.from_string(self.socket_receive.recv_string())
+            if msg.type == "START":
+                self.mainloop()
+            elif msg.type == "STOP":
+                logging.info("Agente %s recebeu mensagem de finalização de atividades." % (self.id))
+                break
+            elif msg.type == "CONFIG":
+                self.configure(msg.content)
+            else:
+                logging.warning("Agente %s recebeu mensagem inválida." % (self.id))
 
     @abc.abstractmethod
-    def run(self):
+    def mainloop(self):
         pass
 
-    def load_from_file(self, filename):
-        with open(filename) as conf_file:
-            for line in conf_file:
-                self.places.append([int(i) for i in line.strip().split()])
-        self.nlines, self.ncols = len(self.places), len(self.places[0])
-
-    def load_from_array(self, array):
-        self.places = []
-        # NOTE: esse comando deveria ser aqui?
-        self.posAgentes = {}
-        array = array.split()
-        self.nlines = nlines = int(array[0])
-        self.ncols = ncols = int(array[1])
-        for i in range(nlines):
-            start, end = 2 + ncols * i, 2 + ncols * (i + 1)
-            self.places.append([int(i) for i in array[start:end]])
+    @abc.abstractmethod
+    def configure(self):
+        pass
 
     def __str__(self):
         return 'Environ: ' + ' '.join(self.places[:])
