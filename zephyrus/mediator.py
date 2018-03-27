@@ -6,7 +6,7 @@ from zephyrus.addresses import Participants as SimulationParticipants
 from zephyrus.message import Messenger
 
 
-class InteractionMessenger(Messenger):
+class MediatorMessenger(Messenger):
     no_parameter_messages = {
         'start': 'START',
         'reset': 'RESET',
@@ -15,8 +15,8 @@ class InteractionMessenger(Messenger):
 
 
 #nome provisório, a classe representa o conjunto de interações
-class Interaction(Process):
-    messenger_class = InteractionMessenger
+class Mediator(Process):
+    messenger_class = MediatorMessenger
 
     def __init__(self, participants_config, tester_alias="tester"):
         super().__init__()
@@ -25,7 +25,7 @@ class Interaction(Process):
         self.participant_sockets = {}
         self.tester_alias = tester_alias
         self._log = []
-        self.messenger = InteractionMessenger('interaction')
+        self.messenger = MediatorMessenger('mediator')
 
     @property
     def messenger(self):
@@ -39,7 +39,7 @@ class Interaction(Process):
         # print self.participantes
         context = zmq.Context()
         self.socket_receive = context.socket(zmq.PULL)
-        address = self.simulation_participants.addresses('interaction')
+        address = self.simulation_participants.addresses('mediator')
         self.socket_receive.bind(address)
         self.socket_tester = context.socket(zmq.PUSH)
         address = self.simulation_participants.addresses(self.tester_alias)
