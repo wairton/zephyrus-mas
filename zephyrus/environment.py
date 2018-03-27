@@ -50,7 +50,7 @@ class Environment(abc.ABC, Process):
         pass
 
     @abc.abstractmethod
-    def configure(self):
+    def configure(self, config_data):
         pass
 
     def __str__(self):

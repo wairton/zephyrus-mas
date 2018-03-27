@@ -42,6 +42,8 @@ class Agent(abc.ABC, Process):
             msg = Message.from_string(self.socket_receive.recv_string())
             if msg.type == 'START':
                 self.mainloop()
+            elif msg.type == 'CONFIG':
+                self.configure(config_data)
             elif msg.type == 'STOP':
                 logging.info("Agente %s recebeu mensagem de finalização de atividades." % (self.id))
                 break
@@ -54,4 +56,8 @@ class Agent(abc.ABC, Process):
 
     @abc.abstractmethod
     def act(self, perceived):
+        pass
+
+    @abc.abstractmethod
+    def configure(self, config_data):
         pass
