@@ -16,7 +16,9 @@ class InteractionMessenger(Messenger):
 
 #nome provisório, a classe representa o conjunto de interações
 class Interaction(Process):
-    def __init__(self, participants_config, tester_alias):
+    messenger_class = InteractionMessenger
+
+    def __init__(self, participants_config, tester_alias="tester"):
         super().__init__()
         self.simulation_participants = SimulationParticipants(participants_config)
         self.participants = {}
@@ -24,6 +26,13 @@ class Interaction(Process):
         self.tester_alias = tester_alias
         self._log = []
         self.messenger = InteractionMessenger('interaction')
+
+    @property
+    def messenger(self):
+        if getattr(self, '_messenger', None) is None:
+            self._messenger = self.messenger_class()
+        return self._messenger
+
     def run(self):
         # TODO add proper logging
         # print 'Interacao rodando!!!'
