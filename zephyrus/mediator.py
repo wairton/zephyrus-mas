@@ -3,7 +3,7 @@ from multiprocessing import Process
 import zmq
 
 from zephyrus.addresses import Participants as SimulationParticipants
-from zephyrus.message import Messenger
+from zephyrus.message import Message, Messenger
 
 
 class MediatorMessenger(Messenger):
@@ -14,7 +14,6 @@ class MediatorMessenger(Messenger):
     }
 
 
-#nome provisório, a classe representa o conjunto de interações
 class Mediator(Process):
     messenger_class = MediatorMessenger
 
@@ -25,12 +24,11 @@ class Mediator(Process):
         self.participant_sockets = {}
         self.tester_alias = tester_alias
         self._log = []
-        self.messenger = MediatorMessenger('mediator')
 
     @property
     def messenger(self):
         if getattr(self, '_messenger', None) is None:
-            self._messenger = self.messenger_class()
+            self._messenger = self.messenger_class('mediator')
         return self._messenger
 
     def run(self):
@@ -39,13 +37,13 @@ class Mediator(Process):
         # print self.participantes
         context = zmq.Context()
         self.socket_receive = context.socket(zmq.PULL)
-        address = self.simulation_participants.addresses('mediator')
+        address = self.simulation_participants.address('mediator')
         self.socket_receive.bind(address)
         self.socket_tester = context.socket(zmq.PUSH)
-        address = self.simulation_participants.addresses(self.tester_alias)
+        address = self.simulation_participants.address(self.tester_alias)
         self.socket_tester.connect(address)
 
-        for pid, address in self.participantes.items():
+        for pid, address in self.participants.items():
             self.sockets_participants[pid] = context.socket(zmq.PUSH)
             self.sockets_participants[pid].connect(address)
         # time.sleep(0.4) #TODO: check if this is necessary
@@ -54,26 +52,15 @@ class Mediator(Process):
     def ready(self):
         while True:
             # TODO APL
-            msg = self.socket_tester.recv()
-            content = msg['content']
-            if content == "FINISH":
+            msg = Message.from_string(self.socket_receive.recv_string())
+            if msg.type == "FINISH":
                 self.broadcast(self.messenger.build_finish_message())
                 break
-            elif content == "START":
-                self.handle_start_message(content)
+            elif msg.type == "START":
+                self.mainloop()
             else:
                 # log error, unknown message
                 pass
-
-    def handle_start_message(self, content):
-        resolucao, ncargas = None, None
-        if len(msg_testador) > 1:
-            resolucao = int(msg_testador[1])
-            ncargas = int(msg_testador[2])
-            nsujeiras = int(msg_testador[3])
-        self._log = []
-        self.broadcast(self.messenger.build_reset_message())
-        self.mainloop()
 
     def mainloop(self):
         while True:

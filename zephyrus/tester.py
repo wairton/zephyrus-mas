@@ -3,6 +3,7 @@ import json
 import logging
 import multiprocessing
 import subprocess
+import os
 import time
 from abc import ABC, abstractmethod
 
@@ -63,14 +64,15 @@ class Tester(ABC, multiprocessing.Process):
             # TODO add log
             if cmd is None:
                 cmd = self.configs['run'][alias].split()
-            subprocess.Popen(cmd)
+            # TODO Remove the SHAME!
+            os.system(' '.join(cmd) + ' &')
+            # subprocess.Popen(cmd)
         else:
             address = self.participants.address(alias)
             logging.info('Run {} manually on {}\n'.format(alias, address))
             input('Press ENTER to continue')
         self.sockets[alias] = self.context.socket(zmq.PUSH)
         self.sockets[alias].connect(self.participants.address(alias))
-
 
     def run(self):
         logging.info('conectando...')

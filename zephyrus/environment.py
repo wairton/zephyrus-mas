@@ -10,12 +10,11 @@ from zephyrus.message import Message
 
 
 class Environment(abc.ABC, Process):
-    def __init__(self, mid, participants_config, components_config=None):
+    def __init__(self, participants_config, components_config=None):
         super().__init__()
         # TODO: give a better name
         self.places = []
         self.agent_positions = {}
-        self.id = mid
         self.participants = Participants(participants_config)
         if components_config is not None:
             self.components = ComponentManager(components_config).enum
@@ -27,23 +26,23 @@ class Environment(abc.ABC, Process):
         self.socket_receive.bind(self.participants.address('environment'))
         self.socket_send = context.socket(zmq.PUSH)
         # connect with interaction
-        self.socket_send.connect(self.participants.address('monitor'))
+        self.socket_send.connect(self.participants.address('mediator'))
         self.ready()
         # time.sleep(0.4) # TODO: checar se é necessário
 
     def ready(self):
-        logging.info('Environmnent {} is ready.'.format(self.id))
+        logging.info('Environmnent is ready.')
         while True:
             msg = Message.from_string(self.socket_receive.recv_string())
             if msg.type == "START":
                 self.mainloop()
             elif msg.type == "STOP":
-                logging.info("Agente %s recebeu mensagem de finalização de atividades." % (self.id))
+                logging.info("Environment received a STOP message")
                 break
             elif msg.type == "CONFIG":
                 self.configure(msg.content)
             else:
-                logging.warning("Agente %s recebeu mensagem inválida." % (self.id))
+                logging.warning("Environmnent received an invalid message.")
 
     @abc.abstractmethod
     def mainloop(self):

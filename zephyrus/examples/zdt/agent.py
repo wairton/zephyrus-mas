@@ -21,6 +21,9 @@ class ZDTAgent(Agent):
     def perceive(self, perceived_data):
         return super().perceive(perceived_data)
 
+    def configure(self, config_data):
+        pass
+
 
 if __name__ == '__main__':
     ZDTAgent(1, *sys.argv[1:]).start()

@@ -16,7 +16,7 @@ class Agent(abc.ABC, Process):
         # communication
         participants = Participants(address_config)
         self.address = participants.address('agent')
-        self.monitor_address = participants.address('monitor')
+        self.mediator_address = participants.address('mediator')
         self.socket_receive = None
         self.socket_send = None
         # internal state
@@ -33,7 +33,7 @@ class Agent(abc.ABC, Process):
         self.socket_receive = context.socket(zmq.PULL)
         self.socket_receive.bind(self.address)
         self.socket_send = context.socket(zmq.PUSH)
-        self.socket_send.connect(self.monitor_address)
+        self.socket_send.connect(self.mediator_address)
         self.ready()
 
     def ready(self):
