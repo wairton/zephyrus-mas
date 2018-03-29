@@ -1,9 +1,11 @@
+import json
 import logging
 from multiprocessing import Process
 
 import zmq
 
 from zephyrus.addresses import Participants as SimulationParticipants
+from zephyrus.exceptions import CoreException
 from zephyrus.message import Message, Messenger
 
 
@@ -24,6 +26,8 @@ class Mediator(Process):
         self.participants = {}
         self.participant_sockets = {}
         self.tester_alias = tester_alias
+        # TODO please, rename this
+        self.sockets_participants = {}
         self._log = []
 
     @property
@@ -33,23 +37,29 @@ class Mediator(Process):
         return self._messenger
 
     def run(self):
-        # TODO add proper logging
-        # print 'Interacao rodando!!!'
-        # print self.participantes
         logging.debug('Mediator is running')
-        context = zmq.Context()
-        self.socket_receive = context.socket(zmq.PULL)
+        self.context = zmq.Context()
+        self.socket_receive = self.context.socket(zmq.PULL)
         address = self.simulation_participants.address('mediator')
         self.socket_receive.bind(address)
-        self.socket_tester = context.socket(zmq.PUSH)
+        self.socket_tester = self.context.socket(zmq.PUSH)
         address = self.simulation_participants.address(self.tester_alias)
         self.socket_tester.connect(address)
-
-        for pid, address in self.participants.items():
-            self.sockets_participants[pid] = context.socket(zmq.PUSH)
-            self.sockets_participants[pid].connect(address)
-        # time.sleep(0.4) #TODO: check if this is necessary
+        self.connect_to_participants()
         self.ready()
+
+    def connect_to_participants(self):
+        # explicitly closing sockets altough GC handles it for us.
+        # http://pyzmq.readthedocs.io/en/latest/api/zmq.html#zmq.Socket.close
+        logging.debug('Mediator is connecting to all participants')
+        for socket in self.sockets_participants.values():
+            if not socket.closed:
+                socket.close()
+        self.sockets_participants = {}
+        for alias, address in self.participants.items():
+            self.sockets_participants[alias] = context.socket(zmq.PUSH)
+            self.sockets_participants[alias].connect(address)
+        # time.sleep(0.4) #TODO: check if this is necessary
 
     def ready(self):
         logging.debug('Mediator is ready')
@@ -66,17 +76,27 @@ class Mediator(Process):
                 pass
 
     def mainloop(self):
-        while True:
-            mmsg = self.socket_receive.recv()
-            # print 'interação: recebi', mmsg, len(mmsg)
-            msg = mmsg.split()
-            de, para, texto = int(msg[0]), int(msg[1]), msg[2:] #NOTE: o último elemento NÃO é uma string
-            self._log.append((de,para,texto))
-            if para == -1:
-                # TODO send result to tester
-                break
-            #sockets_participantes[para].send("%s %s" % (de, texto[0]))
-            self.sockets_participantes[para].send(mmsg)
+        active_participants = set(self.participants.keys())
+        while len(active_participants) > 0:
+            msg_str = self.socket_receive.recv_string()
+            msg = Message.from_string(msg_str)
+            sender = msg.sender
+            receiver = msg.receiver
+
+            if sender is None or receiver is None:
+                emsg = "Messages sent through Mediator must specify both sender and receiver."
+                raise CoreException(emsg)
+
+            if receiver == 'mediator':
+                # TODO we must made clear the difference between FINISH and STOP
+                if msg.type == 'STOP':
+                    active_participants.remove(sender)
+            else:
+                self._log.append(msg_str)
+            self.sockets_participants[receiver].send_string(msg_str)
+        # TODO We must improve this. Think about how badly this scales.
+        msg = Message('mediator', 'RESULT', self._log, 'tester')
+        self.socket_tester.send_string(str(msg))
 
     def add_participant(self, pid: int, address: str):
         # TODO apl
@@ -89,4 +109,4 @@ class Mediator(Process):
     def broadcast(self, message):
         raw = str(message)
         for pid in self.participants:
-            self.sockets_participantes[pid].send(raw)
+            self.sockets_participants[pid].send(raw)
