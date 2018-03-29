@@ -6,9 +6,12 @@ from zephyrus.message import Message
 
 class ZDTEnvironment(Environment):
     def mainloop(self):
-        logging.debug("mainloop {}".format(self.places))
-        # self.socket_send.send("environment", "REQUEST", self.places)
-        # msg = self.socket_receive.recv()
+        self.socket_send.send_string(str(Message("environment", "PERCEIVED", self.places, "agent")))
+        logging.debug("Environment: received {}".format(self.socket_receive.recv_string()))
+        logging.debug("Environment: agent, please stop")
+        self.socket_send.send_string(str(Message("environment", "STOP", self.places, "agent")))
+        logging.debug("Environment: monitor, I'm stopping now")
+        self.socket_send.send_string(str(Message("environment", "STOP", self.places, "monitor")))
 
     def configure(self, content):
         self.places = content
