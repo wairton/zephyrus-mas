@@ -14,10 +14,11 @@ class ZDTAgent(Agent):
             logging.debug("Agent: received {}".format(str(msg)))
             if msg.type == 'STOP':
                 action = Message("agent", "STOP", receiver="mediator")
+                self.socket_send.send_string(str(action))
                 break
             else:
                 action = self.perceive(msg.content)
-            self.socket_send.send_string(str(action))
+                self.socket_send.send_string(str(action))
 
     def act(self, perceived):
         f1 = perceived[0]

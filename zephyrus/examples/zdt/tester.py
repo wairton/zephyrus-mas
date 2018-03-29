@@ -8,6 +8,12 @@ class ZDTTester(Tester):
             'length': 10
         }
 
+    def get_mediator_config(self):
+        return {
+            'agent': self.participants.address('agent'),
+            'environment': self.participants.address('environment')
+        }
+
 
 if __name__ == '__main__':
     import os

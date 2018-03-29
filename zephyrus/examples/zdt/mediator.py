@@ -2,7 +2,9 @@ from zephyrus.mediator import Mediator
 
 
 class ZDTMediator(Mediator):
-    pass
+    def configure(self, content):
+        self.participants = content
+        self.connect_to_participants()
 
 
 if __name__ == '__main__':
@@ -12,3 +14,4 @@ if __name__ == '__main__':
     args = [s if s.startswith("/") else os.path.join(basedir, s) for s in sys.argv[1:]]
 
     ZDTMediator(*args).start()
+

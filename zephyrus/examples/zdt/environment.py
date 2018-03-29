@@ -9,9 +9,9 @@ class ZDTEnvironment(Environment):
         self.socket_send.send_string(str(Message("environment", "PERCEIVED", self.places, "agent")))
         logging.debug("Environment: received {}".format(self.socket_receive.recv_string()))
         logging.debug("Environment: agent, please stop")
-        self.socket_send.send_string(str(Message("environment", "STOP", self.places, "agent")))
+        self.socket_send.send_string(str(Message("environment", "STOP", receiver="agent")))
         logging.debug("Environment: monitor, I'm stopping now")
-        self.socket_send.send_string(str(Message("environment", "STOP", self.places, "monitor")))
+        self.socket_send.send_string(str(Message("environment", "STOP", receiver="mediator")))
 
     def configure(self, content):
         self.places = content
