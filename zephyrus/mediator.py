@@ -1,3 +1,4 @@
+import logging
 from multiprocessing import Process
 
 import zmq
@@ -35,6 +36,7 @@ class Mediator(Process):
         # TODO add proper logging
         # print 'Interacao rodando!!!'
         # print self.participantes
+        logging.debug('Mediator is running')
         context = zmq.Context()
         self.socket_receive = context.socket(zmq.PULL)
         address = self.simulation_participants.address('mediator')
@@ -50,6 +52,7 @@ class Mediator(Process):
         self.ready()
 
     def ready(self):
+        logging.debug('Mediator is ready')
         while True:
             # TODO APL
             msg = Message.from_string(self.socket_receive.recv_string())

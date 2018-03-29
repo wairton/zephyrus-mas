@@ -43,7 +43,7 @@ class Agent(abc.ABC, Process):
             if msg.type == 'START':
                 self.mainloop()
             elif msg.type == 'CONFIG':
-                self.configure(config_data)
+                self.configure(msg.content)
             elif msg.type == 'STOP':
                 logging.info("Agente %s recebeu mensagem de finalização de atividades." % (self.id))
                 break

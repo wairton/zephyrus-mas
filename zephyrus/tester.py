@@ -63,10 +63,14 @@ class Tester(ABC, multiprocessing.Process):
         if '<MANUAL>' not in self.configs['run'][alias]:
             # TODO add log
             if cmd is None:
-                cmd = self.configs['run'][alias].split()
+                # cmd = self.configs['run'][alias].split()
+                cmd = self.configs['run'][alias]
             # TODO Remove the SHAME!
-            os.system(' '.join(cmd) + ' &')
-            # subprocess.Popen(cmd)
+            # os.system(' '.join(cmd) + ' &')
+            # subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE).communicate()
+            # https://docs.python.org/2/library/subprocess.html#replacing-os-system
+            cmd = cmd + ' &'
+            subprocess.call(cmd, shell=True)
         else:
             address = self.participants.address(alias)
             logging.info('Run {} manually on {}\n'.format(alias, address))
@@ -93,6 +97,7 @@ class Tester(ABC, multiprocessing.Process):
     def initialize_participants_centralized(self):
         # TODO add log
         # plogging.info.plogging.info(self.configs)
+        self.initialize_participant('strategy')
         self.initialize_participant('mediator')
         self.initialize_participant('environment')
         self.initialize_participant('agent')
@@ -101,7 +106,6 @@ class Tester(ABC, multiprocessing.Process):
         for i, cmd in enumerate(self.configs['run']['agents']):
             self.initialize_participant("agent {}".format(i), cmd.split())
         """
-        self.initialize_participant('strategy')
 
     def stop_participants(self):
         stop_message = str(self.messenger.build_stop_message())
@@ -121,6 +125,7 @@ class Tester(ABC, multiprocessing.Process):
         while True:
             logging.debug('waiting message from strategy')
             msg = self.receive_message()
+            logging.debug('Tester received {}'.format(str(msg)))
             if msg.sender != 'strategy':
                 logging.debug('received message from {} instead of strategy'.format(msg.sender))
                 # we shouldn't been receiving messages from any other sender at this point...
@@ -136,7 +141,7 @@ class Tester(ABC, multiprocessing.Process):
                 self.sockets['environment'].send_string(start_message)
                 # TODO this must work for multiple agents
                 logging.debug('evaluate, lets configure agent')
-                self.sockets['agent'].send_string(str(self.build_environment_config_message()))
+                self.sockets['agent'].send_string(str(self.build_agent_config_message()))
                 self.sockets['agent'].send_string(start_message)
                 # a message from mediator is expected
                 logging.debug('evaluate, waiting for mediator\'s answer')
@@ -164,13 +169,16 @@ class Tester(ABC, multiprocessing.Process):
     def build_environment_config_message(self, strategy_data):
         return self.messenger.build_config_message(self.get_environment_config(strategy_data))
 
-    def get_environment_config(self):
+    def get_environment_config(self, content):
         return None
+
+    def build_agent_config_message(self):
+        return self.messenger.build_config_message(self.get_agent_config())
 
     def get_agent_config(self):
         return None
 
-    def get_interaction_config(self):
+    def get_monitor_config(self):
         return None
 
     #TODO: expandir para uma versão com roteiro
