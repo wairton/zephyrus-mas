@@ -49,17 +49,24 @@ class Mediator(Process):
         self.ready()
 
     def connect_to_participants(self):
-        # explicitly closing sockets altough GC handles it for us.
-        # http://pyzmq.readthedocs.io/en/latest/api/zmq.html#zmq.Socket.close
+        self.remove_all_participants()
         logging.debug('Mediator is connecting to all participants')
-        for socket in self.sockets_participants.values():
-            if not socket.closed:
-                socket.close()
-        self.sockets_participants = {}
         for alias, address in self.participants.items():
-            self.sockets_participants[alias] = context.socket(zmq.PUSH)
+            self.sockets_participants[alias] = self.context.socket(zmq.PUSH)
             self.sockets_participants[alias].connect(address)
         # time.sleep(0.4) #TODO: check if this is necessary
+
+    def remove_all_participants(self):
+        logging.debug('Mediator is removing all participants')
+        # explicitly closing sockets altough GC handles it for us.
+        # http://pyzmq.readthedocs.io/en/latest/api/zmq.html#zmq.Socket.close
+        for socket in self.sockets_participants.values():
+            pass
+            #if not socket.closed:
+            #    print('oi')
+                # socket.close()
+        self.sockets_participants = {}
+
 
     def ready(self):
         logging.debug('Mediator is ready')
@@ -71,6 +78,8 @@ class Mediator(Process):
                 break
             elif msg.type == "START":
                 self.mainloop()
+            elif msg.type == "CONFIG":
+                self.configure(msg.content)
             else:
                 # log error, unknown message
                 pass
@@ -79,6 +88,7 @@ class Mediator(Process):
         active_participants = set(self.participants.keys())
         while len(active_participants) > 0:
             msg_str = self.socket_receive.recv_string()
+            logging.debug('Mediator, received {}'.format(msg_str))
             msg = Message.from_string(msg_str)
             sender = msg.sender
             receiver = msg.receiver
@@ -93,7 +103,8 @@ class Mediator(Process):
                     active_participants.remove(sender)
             else:
                 self._log.append(msg_str)
-            self.sockets_participants[receiver].send_string(msg_str)
+                logging.debug('Mediator, sending it to {}'.format(receiver))
+                self.sockets_participants[receiver].send_string(msg_str)
         # TODO We must improve this. Think about how badly this scales.
         msg = Message('mediator', 'RESULT', self._log, 'tester')
         self.socket_tester.send_string(str(msg))

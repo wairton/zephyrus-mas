@@ -31,8 +31,8 @@ class Environment(abc.ABC, Process):
         # time.sleep(0.4) # TODO: checar se é necessário
 
     def ready(self):
-        logging.info('Environmnent is ready.')
         while True:
+            logging.info('Environmnent is ready.')
             msg = Message.from_string(self.socket_receive.recv_string())
             if msg.type == "START":
                 self.mainloop()

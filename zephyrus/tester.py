@@ -121,7 +121,7 @@ class Tester(ABC, multiprocessing.Process):
 
         self.sockets['strategy'].send_string(str(self.build_strategy_config_message()))
         self.sockets['strategy'].send_string(start_message)
-        self.sockets['mediator'].send_string(start_message)
+        self.sockets['mediator'].send_string(str(self.build_mediator_config_message()))
         while True:
             logging.debug('waiting message from strategy')
             msg = self.receive_message()
@@ -145,7 +145,9 @@ class Tester(ABC, multiprocessing.Process):
                 self.sockets['agent'].send_string(start_message)
                 # a message from mediator is expected
                 logging.debug('evaluate, waiting for mediator\'s answer')
+                self.sockets['mediator'].send_string(start_message)
                 msg = self.receive_message()
+                logging.debug('evaluate {}'.format(str(msg)))
 
                 # TODO check if the message is from mediator or raise error
                 # TODO evaluate mediators message
@@ -170,7 +172,7 @@ class Tester(ABC, multiprocessing.Process):
         return self.messenger.build_config_message(self.get_environment_config(strategy_data))
 
     def get_environment_config(self, content):
-        return None
+        return content
 
     def build_agent_config_message(self):
         return self.messenger.build_config_message(self.get_agent_config())
@@ -178,7 +180,10 @@ class Tester(ABC, multiprocessing.Process):
     def get_agent_config(self):
         return None
 
-    def get_monitor_config(self):
+    def build_mediator_config_message(self):
+        return self.messenger.build_config_message(self.get_mediator_config())
+
+    def get_mediator_config(self):
         return None
 
     #TODO: expandir para uma versão com roteiro

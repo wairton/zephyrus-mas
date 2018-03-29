@@ -37,9 +37,10 @@ class Agent(abc.ABC, Process):
         self.ready()
 
     def ready(self):
-        logging.info('Agent {} is ready.'.format(self.id))
         while True:
+            logging.info('Agent {} is ready.'.format(self.id))
             msg = Message.from_string(self.socket_receive.recv_string())
+            logging.debug('Agent received {}'.format(str(msg)))
             if msg.type == 'START':
                 self.mainloop()
             elif msg.type == 'CONFIG':
