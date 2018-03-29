@@ -1,0 +1,6 @@
+{
+    "strategy": "/home/wairton/.virtualenvs/zephyrusdev/bin/python -m \"zephyrus.examples.zdt.strategy\" config/addresses.json",
+    "mediator": "/home/wairton/.virtualenvs/zephyrusdev/bin/python -m \"zephyrus.examples.zdt.mediator\" config/addresses.json",
+    "environment": "/home/wairton/.virtualenvs/zephyrusdev/bin/python -m \"zephyrus.examples.zdt.environment\" config/addresses.json",
+    "agent": "/home/wairton/.virtualenvs/zephyrusdev/bin/python -m \"zephyrus.examples.zdt.agent\" config/addresses.json"
+}
