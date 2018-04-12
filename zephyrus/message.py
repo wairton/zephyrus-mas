@@ -1,9 +1,8 @@
 import json
 
 
-# TODO fix the receiver attribute
 class Message:
-    def __init__(self, sender, message_type, content=None, receiver=None):
+    def __init__(self, sender, receiver=None, message_type=None, content=None):
         self.message = {
             'sender': sender,
             'receiver': receiver,
@@ -20,7 +19,7 @@ class Message:
     @classmethod
     def from_json(self, json_dict):
         # TODO: missing attributes parsing
-        return Message(json_dict['sender'], json_dict['type'], json_dict['content'], json_dict.get('receiver'))
+        return Message(json_dict['sender'], json_dict.get('receiver'), json_dict.get('type'), json_dict['content'])
 
     @classmethod
     def from_string(self, json_str):
@@ -32,7 +31,7 @@ class Message:
 
     @property
     def receiver(self):
-        return self.message.get('receiver')
+        return self.message['receiver']
 
     @property
     def type(self):
@@ -54,10 +53,10 @@ class MessengerMeta(type):
         return clsobj
 
     @staticmethod
-    def get_method(name, content):
-        def method(self, receiver=None):
+    def get_method(name, msg_type):
+        def method(self, receiver=None, content=None):
             receiver = receiver or self.default_receiver
-            return Message(self.sender, content, receiver)
+            return Message(self.sender, receiver, message_type=msg_type, content=content)
         return 'build_{}_message'.format(name), method
 
 

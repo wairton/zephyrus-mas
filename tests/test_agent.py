@@ -13,10 +13,13 @@ from zephyrus.tester import TesterMessenger as ZTesterMessenger
 def DummyAgent():
     class Dummy(Agent):
         def act(self, perceived):
-            return Message('agent', 'RESULT', perceived[::-1])
+            return Message('agent', message_type='RESULT', content=perceived[::-1])
 
         def perceive(self, perceived_data):
             return super().perceive(perceived_data)
+
+        def configure(self, config_data):
+            pass
 
         def mainloop(self):
             msg = Message.from_string(self.socket_receive.recv_string())
@@ -34,7 +37,7 @@ def address_config_file(tmpdir_factory):
       "tester": "tcp://127.0.0.1:6600",
       "tester_par": "tcp://127.0.0.1:6601",
       "tester_est": "tcp://127.0.0.1:6605",
-      "monitor": "tcp://127.0.0.1:6500",
+      "mediator": "tcp://127.0.0.1:6500",
       "environment": "tcp://127.0.0.1:6000",
       "agent": "tcp://127.0.0.1:6001"
     }
@@ -51,10 +54,10 @@ def test_agent_hello(DummyAgent, address_config_file):
     ssend = ctx.socket(zmq.PUSH)
     ssend.connect(participants.address('agent'))
     srecv = ctx.socket(zmq.PULL)
-    srecv.bind(participants.address('monitor'))
+    srecv.bind(participants.address('mediator'))
     ssend.send_string(str(messenger.build_start_message()))
     content = list(range(10))
-    ssend.send_string(json.dumps({'sender': 'oi', 'type': 'bumba', 'content': content}))
+    ssend.send_string(json.dumps({'sender': 'oi', 'receiver': '', 'type': 'bumba', 'content': content}))
     msg = Message.from_json(srecv.recv_json())
     assert msg.sender == 'agent'
     assert msg.type == 'RESULT'
