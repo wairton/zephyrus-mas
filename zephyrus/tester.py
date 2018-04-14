@@ -3,9 +3,8 @@ import json
 import logging
 import multiprocessing
 import subprocess
-import os
 import time
-from abc import ABC, abstractmethod
+from abc import ABC
 
 import zmq
 
@@ -23,10 +22,10 @@ class TesterMessenger(Messenger):
     }
 
     def build_config_message(self, config_data):
-        return Message(self.sender, 'CONFIG', config_data)
+        return Message(self.sender, message_type='CONFIG', content=config_data)
 
     def build_result_message(self, result_content):
-        return Message(self.sender, 'RESULT', result_content)
+        return Message(self.sender, message_type='RESULT', content=result_content)
 
 
 # TODO we can do it better,
@@ -129,7 +128,6 @@ class Tester(ABC, multiprocessing.Process):
             if msg.sender != 'strategy':
                 logging.debug('received message from {} instead of strategy'.format(msg.sender))
                 # we shouldn't been receiving messages from any other sender at this point...
-                pass
                 break
             if msg.type == 'STOP':
                 logging.debug('stop participants')
@@ -148,19 +146,26 @@ class Tester(ABC, multiprocessing.Process):
                 self.sockets['mediator'].send_string(start_message)
                 msg = self.receive_message()
                 logging.debug('evaluate {}'.format(str(msg)))
+                result = self.evaluate(msg.content)
 
                 # TODO check if the message is from mediator or raise error
                 # TODO evaluate mediators message
                 logging.debug('evaluate, send answer to strategy')
-                result_message = self.messenger.build_result_message(msg.content)
+                result_message = self.messenger.build_result_message(result)
                 self.sockets['strategy'].send_string(str(result_message))
-
 
     def receive_message(self):
         return Message.from_string(self.socket_receive.recv_string())
 
     def evaluate(self, data):
-        pass
+        result = None
+        for item in data:
+            parsed_item = json.loads(item)
+            if parsed_item['type'] != 'RESULT':
+                continue
+            result = parsed_item['content']
+            break
+        return result
 
     def build_strategy_config_message(self):
         return self.messenger.build_config_message(self.get_strategy_config())
@@ -186,13 +191,12 @@ class Tester(ABC, multiprocessing.Process):
     def get_mediator_config(self):
         return None
 
-    #TODO: expandir para uma versão com roteiro
+    # TODO: expandir para uma versão com roteiro
     def iniciar_simulacao(self, mode):
-        teste = self.socket_receive()
+        # teste = self.socket_receive()
 
         tinicio = time.time()
         logging.debug('Teste iniciado às: ', time.strftime("%H:%M:%S", time.localtime()))
-        #self.
 
         self.configuracao = json.loads(open('configuracao.js').read())
         self.cenario_padrao = map(int, self._configuracao["cenario_padrao"].split())
@@ -200,6 +204,6 @@ class Tester(ABC, multiprocessing.Process):
         populacao = self.estrategia.main_loop()
         self.analise(populacao)
 
-        tfim  = time.time()
+        tfim = time.time()
         logging.debug('Teste finalizado às: ', time.strftime("%H:%M:%S", time.localtime()))
-        logging.debug("tempo consumido: ",  str(tfim - tinicio) + 's')
+        logging.debug("tempo consumido: ", str(tfim - tinicio) + 's')

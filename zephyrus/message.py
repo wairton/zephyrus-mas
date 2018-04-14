@@ -19,7 +19,7 @@ class Message:
     @classmethod
     def from_json(self, json_dict):
         # TODO: missing attributes parsing
-        return Message(json_dict['sender'], json_dict.get('receiver'), json_dict.get('type'), json_dict['content'])
+        return Message(json_dict['sender'], json_dict.get('receiver'), json_dict.get('type'), json_dict.get('content'))
 
     @classmethod
     def from_string(self, json_str):

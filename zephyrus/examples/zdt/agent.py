@@ -13,7 +13,7 @@ class ZDTAgent(Agent):
             msg = Message.from_string(self.socket_receive.recv_string())
             logging.debug("Agent: received {}".format(str(msg)))
             if msg.type == 'STOP':
-                action = Message("agent", "STOP", receiver="mediator")
+                action = Message("agent", message_type="STOP", receiver="mediator")
                 self.socket_send.send_string(str(action))
                 break
             else:
@@ -24,7 +24,7 @@ class ZDTAgent(Agent):
         f1 = perceived[0]
         g = 1 + 9 * sum(islice(perceived, 1, None)) / (len(perceived) - 1)
         zdt = 1 - sqrt(f1 / g)
-        return Message("agent", "RESULT", receiver="environment", content=zdt)
+        return Message("agent", message_type="RESULT", receiver="environment", content=zdt)
 
     def perceive(self, perceived_data):
         return super().perceive(perceived_data)

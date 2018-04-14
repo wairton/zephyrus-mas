@@ -1,4 +1,3 @@
-import json
 import logging
 from multiprocessing import Process
 
@@ -62,11 +61,10 @@ class Mediator(Process):
         # http://pyzmq.readthedocs.io/en/latest/api/zmq.html#zmq.Socket.close
         for socket in self.sockets_participants.values():
             pass
-            #if not socket.closed:
+            # if not socket.closed:
             #    print('oi')
-                # socket.close()
+            #    socket.close()
         self.sockets_participants = {}
-
 
     def ready(self):
         logging.debug('Mediator is ready')
@@ -106,7 +104,7 @@ class Mediator(Process):
                 logging.debug('Mediator, sending it to {}'.format(receiver))
                 self.sockets_participants[receiver].send_string(msg_str)
         # TODO We must improve this. Think about how badly this scales.
-        msg = Message('mediator', 'RESULT', self._log, 'tester')
+        msg = Message('mediator', 'tester', 'RESULT', self._log)
         self.socket_tester.send_string(str(msg))
 
     def add_participant(self, pid: int, address: str):

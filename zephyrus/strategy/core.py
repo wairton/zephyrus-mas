@@ -16,7 +16,7 @@ class StrategyMessenger(Messenger):
     }
 
     def build_evaluate_message(self, content):
-        return Message(self.sender, 'EVALUATE', content)
+        return Message(self.sender, message_type='EVALUATE', content=content)
 
 
 class Strategy(abc.ABC, Process):

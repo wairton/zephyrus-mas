@@ -19,6 +19,7 @@ class ZDTStrategy(Strategy):
             msg = self.messenger.build_evaluate_message(solution)
             self.socket_send.send_string(str(msg))
             ans = Message.from_string(self.socket_receive.recv_string())
+            logging.debug('Received {}'.format(str(ans)))
             if msg.type == 'RESULT':
                 if best_value is None or best_value > ans.content:
                     best_value = ans.content
