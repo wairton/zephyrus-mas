@@ -106,6 +106,7 @@ class Mediator(Process):
         # TODO We must improve this. Think about how badly this scales.
         msg = Message('mediator', 'tester', 'RESULT', self._log)
         self.socket_tester.send_string(str(msg))
+        self._log = []
 
     def add_participant(self, pid: int, address: str):
         # TODO apl

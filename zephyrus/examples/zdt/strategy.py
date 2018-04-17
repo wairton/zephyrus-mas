@@ -26,7 +26,15 @@ class ZDTStrategy(Strategy):
                     best_solution = solution
             if msg.type == 'STOP':
                 logging.info('Strategy stopping')
-            self.socket_send.send_string(str(self.messenger.build_stop_message()))
+                break
+        logging.debug('Strategy: best found {}'.format(best_value))
+        logging.debug('Strategy: best solution {}'.format(best_solution))
+        self.socket_send.send_string(str(self.messenger.build_stop_message()))
+        msg = self.messenger.build_result_message({
+            'value': best_value,
+            'solution': best_solution
+        })
+        self.socket_send.send_string(str(msg))
 
 
 if __name__ == '__main__':

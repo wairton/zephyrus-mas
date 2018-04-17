@@ -1,3 +1,5 @@
+import logging
+
 from zephyrus.tester import Tester
 
 
@@ -13,6 +15,9 @@ class ZDTTester(Tester):
             'agent': self.participants.address('agent'),
             'environment': self.participants.address('environment')
         }
+
+    def report_result(self, msg):
+        logging.info("Report: {}".format(str(msg)))
 
 
 if __name__ == '__main__':

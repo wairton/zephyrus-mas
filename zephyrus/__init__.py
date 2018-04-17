@@ -8,4 +8,8 @@ __version__ = '0.5.0'
 
 
 import logging
-logging.basicConfig(level=logging.DEBUG)
+# log_format = "%(created)s"
+# %(created)f
+# FORMAT = '%(asctime)-15s %(message)s'
+FORMAT = '%(created)f %(message)s'
+logging.basicConfig(level=logging.DEBUG, format=FORMAT)

@@ -4,7 +4,7 @@ import logging
 import multiprocessing
 import subprocess
 import time
-from abc import ABC
+from abc import ABC, abstractmethod
 
 import zmq
 
@@ -132,6 +132,7 @@ class Tester(ABC, multiprocessing.Process):
             if msg.type == 'STOP':
                 logging.debug('stop participants')
                 self.stop_participants()
+                break
             elif msg.type == 'EVALUATE':
                 logging.debug('evaluate, lets configure environment')
                 environ_config = self.build_environment_config_message(msg.content)
@@ -153,6 +154,8 @@ class Tester(ABC, multiprocessing.Process):
                 logging.debug('evaluate, send answer to strategy')
                 result_message = self.messenger.build_result_message(result)
                 self.sockets['strategy'].send_string(str(result_message))
+        msg = self.receive_message()
+        self.report_result(msg)
 
     def receive_message(self):
         return Message.from_string(self.socket_receive.recv_string())
@@ -166,6 +169,10 @@ class Tester(ABC, multiprocessing.Process):
             result = parsed_item['content']
             break
         return result
+
+    @abstractmethod
+    def report_result(self, msg):
+        pass
 
     def build_strategy_config_message(self):
         return self.messenger.build_config_message(self.get_strategy_config())
@@ -201,8 +208,7 @@ class Tester(ABC, multiprocessing.Process):
         self.configuracao = json.loads(open('configuracao.js').read())
         self.cenario_padrao = map(int, self._configuracao["cenario_padrao"].split())
         self.estrategia = self.estrategia_nsga2()
-        populacao = self.estrategia.main_loop()
-        self.analise(populacao)
+        self.estrategia.main_loop()
 
         tfim = time.time()
         logging.debug('Teste finalizado às: ', time.strftime("%H:%M:%S", time.localtime()))
