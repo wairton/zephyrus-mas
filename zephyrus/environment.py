@@ -1,5 +1,6 @@
 import abc
 import logging
+import time
 from multiprocessing import Process
 
 import zmq
@@ -35,6 +36,7 @@ class Environment(abc.ABC, Process):
             logging.info('Environmnent is ready.')
             msg = Message.from_string(self.socket_receive.recv_string())
             if msg.type == "START":
+                time.sleep(0.5)
                 self.mainloop()
             elif msg.type == "STOP":
                 logging.info("Environment received a STOP message")

@@ -1,5 +1,6 @@
 import abc
 import logging
+import time
 from multiprocessing import Process
 
 import zmq
@@ -42,6 +43,7 @@ class Agent(abc.ABC, Process):
             msg = Message.from_string(self.socket_receive.recv_string())
             logging.debug('Agent received {}'.format(str(msg)))
             if msg.type == 'START':
+                time.sleep(0.5)
                 self.mainloop()
             elif msg.type == 'CONFIG':
                 self.configure(msg.content)

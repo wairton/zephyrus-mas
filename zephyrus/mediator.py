@@ -67,10 +67,11 @@ class Mediator(Process):
         self.sockets_participants = {}
 
     def ready(self):
-        logging.debug('Mediator is ready')
         while True:
+            logging.debug('Mediator is ready!!')
             # TODO APL
             msg = Message.from_string(self.socket_receive.recv_string())
+            logging.debug('Mediator: received {}'.format(str(msg)))
             if msg.type == "FINISH":
                 self.broadcast(self.messenger.build_finish_message())
                 break
@@ -78,7 +79,10 @@ class Mediator(Process):
                 self.mainloop()
             elif msg.type == "CONFIG":
                 self.configure(msg.content)
+            elif msg.type == "STOP":
+                break
             else:
+                logging.error('Mediator received invalida message {}'.format(str(msg)))
                 # log error, unknown message
                 pass
 

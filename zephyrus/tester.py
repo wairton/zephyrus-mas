@@ -137,14 +137,14 @@ class Tester(ABC, multiprocessing.Process):
                 logging.debug('evaluate, lets configure environment')
                 environ_config = self.build_environment_config_message(msg.content)
                 self.sockets['environment'].send_string(str(environ_config))
-                self.sockets['environment'].send_string(start_message)
                 # TODO this must work for multiple agents
                 logging.debug('evaluate, lets configure agent')
                 self.sockets['agent'].send_string(str(self.build_agent_config_message()))
-                self.sockets['agent'].send_string(start_message)
-                # a message from mediator is expected
-                logging.debug('evaluate, waiting for mediator\'s answer')
                 self.sockets['mediator'].send_string(start_message)
+                self.sockets['agent'].send_string(start_message)
+                self.sockets['environment'].send_string(start_message)
+                logging.debug('evaluate, waiting for mediator\'s answer')
+                # a message from mediator is expected
                 msg = self.receive_message()
                 logging.debug('evaluate {}'.format(str(msg)))
                 result = self.evaluate(msg.content)
@@ -154,6 +154,7 @@ class Tester(ABC, multiprocessing.Process):
                 logging.debug('evaluate, send answer to strategy')
                 result_message = self.messenger.build_result_message(result)
                 self.sockets['strategy'].send_string(str(result_message))
+        logging.debug('tester, waiting report...')
         msg = self.receive_message()
         self.report_result(msg)
 

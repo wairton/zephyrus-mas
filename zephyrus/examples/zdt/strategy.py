@@ -34,6 +34,7 @@ class ZDTStrategy(Strategy):
             'value': best_value,
             'solution': best_solution
         })
+        logging.debug('Strategy: sending result {}'.format(str(msg)))
         self.socket_send.send_string(str(msg))
 
 
