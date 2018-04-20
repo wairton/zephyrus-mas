@@ -28,23 +28,23 @@ class Environment(abc.ABC, Process):
         self.socket_send = context.socket(zmq.PUSH)
         # connect with interaction
         self.socket_send.connect(self.participants.address('mediator'))
+        logging.info("Environment: running.")
         self.ready()
-        # time.sleep(0.4) # TODO: checar se é necessário
 
     def ready(self):
         while True:
-            logging.info('Environmnent is ready.')
+            logging.debug('Environmnent is ready.')
             msg = Message.from_string(self.socket_receive.recv_string())
             if msg.type == "START":
                 time.sleep(0.25)
                 self.mainloop()
             elif msg.type == "STOP":
-                logging.info("Environment received a STOP message")
+                logging.info("Environment: stopping.")
                 break
             elif msg.type == "CONFIG":
                 self.configure(msg.content)
             else:
-                logging.warning("Environmnent received an invalid message.")
+                logging.error("Environmnent received an invalid message.")
 
     @abc.abstractmethod
     def mainloop(self):

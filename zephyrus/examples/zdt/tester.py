@@ -6,7 +6,7 @@ from zephyrus.tester import Tester
 class ZDTTester(Tester):
     def get_strategy_config(self):
         return {
-            'niter': 10,
+            'niter': 100,
             'length': 10
         }
 

@@ -32,7 +32,6 @@ class Mediator(Process):
         return self._messenger
 
     def run(self):
-        logging.debug('Mediator is running')
         self.context = zmq.Context()
         self.socket_receive = self.context.socket(zmq.PULL)
         address = self.simulation_participants.address('mediator')
@@ -41,6 +40,7 @@ class Mediator(Process):
         address = self.simulation_participants.address(self.tester_alias)
         self.socket_tester.connect(address)
         self.connect_to_participants()
+        logging.info('Mediator: running.')
         self.ready()
 
     def connect_to_participants(self):
@@ -76,11 +76,10 @@ class Mediator(Process):
             elif msg.type == "CONFIG":
                 self.configure(msg.content)
             elif msg.type == "STOP":
+                logging.info("Mediator: stopping.")
                 break
             else:
-                logging.error('Mediator received invalida message {}'.format(str(msg)))
-                # log error, unknown message
-                pass
+                logging.error('Mediator received invalid message {}'.format(str(msg)))
 
     def mainloop(self):
         active_participants = set(self.participants.keys())

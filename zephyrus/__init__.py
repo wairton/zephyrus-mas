@@ -12,4 +12,4 @@ import logging
 # %(created)f
 # FORMAT = '%(asctime)-15s %(message)s'
 FORMAT = '%(created)f %(message)s'
-logging.basicConfig(level=logging.DEBUG, format=FORMAT)
+logging.basicConfig(level=logging.INFO, format=FORMAT)

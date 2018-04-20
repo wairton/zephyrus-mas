@@ -35,17 +35,17 @@ class Strategy(abc.ABC, Process):
         return self._messenger
 
     def run(self):
-        logging.debug('Strategy is running.')
         context = zmq.Context()
         self.socket_receive = context.socket(zmq.PULL)
         self.socket_receive.bind(self.address)
         self.socket_send = context.socket(zmq.PUSH)
         self.socket_send.connect(self.tester_address)
+        logging.info('Strategy: running.')
         self.ready()
 
     def ready(self):
         while True:
-            logging.info('Strategy is ready.')
+            logging.debug('Strategy is ready.')
             msg = Message.from_string(self.socket_receive.recv_string())
             logging.debug("Strategy {}".format(str(msg)))
             if msg.type == 'START':
@@ -53,11 +53,11 @@ class Strategy(abc.ABC, Process):
             elif msg.type == 'CONFIG':
                 self.configure(msg.content)
             elif msg.type == 'STOP':
-                logging.info("Strategy received STOP message")
+                logging.info("Strategy: stopping.")
                 break
             else:
+                logging.error("Strategy received invalid message")
                 logging.debug(str(msg))
-                logging.warning("Strategy received invalid message")
 
     @abc.abstractmethod
     def mainloop(self):

@@ -29,7 +29,7 @@ class Agent(abc.ABC, Process):
         return self.act(perceived_data)
 
     def run(self):
-        logging.debug('Agent {} is running.'.format(self.id))
+        logging.info('Agent {}: running.'.format(self.id))
         context = zmq.Context()
         self.socket_receive = context.socket(zmq.PULL)
         self.socket_receive.bind(self.address)
@@ -39,7 +39,7 @@ class Agent(abc.ABC, Process):
 
     def ready(self):
         while True:
-            logging.info('Agent {} is ready.'.format(self.id))
+            logging.debug('Agent {} is ready.'.format(self.id))
             msg = Message.from_string(self.socket_receive.recv_string())
             logging.debug('Agent received {}'.format(str(msg)))
             if msg.type == 'START':
@@ -48,10 +48,10 @@ class Agent(abc.ABC, Process):
             elif msg.type == 'CONFIG':
                 self.configure(msg.content)
             elif msg.type == 'STOP':
-                logging.info("Agente %s recebeu mensagem de finalização de atividades." % (self.id))
+                logging.info("Agent {}: stopping.".format(self.id))
                 break
             else:
-                logging.warning("Agente %s recebeu mensagem inválida." % (self.id))
+                logging.warning("Agent {} received invalid message.".format(self.id))
 
     @abc.abstractmethod
     def mainloop(self):

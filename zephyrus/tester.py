@@ -68,7 +68,7 @@ class Tester(ABC, multiprocessing.Process):
         self.sockets[alias].connect(self.participants.address(alias))
 
     def run(self):
-        logging.info('conectando...')
+        logging.info('Tester: running.')
         mode = Mode.from_string(self.configs['simulation']['mode'])
         self.context = zmq.Context()
         self.socket_receive = self.context.socket(zmq.PULL)
@@ -78,25 +78,23 @@ class Tester(ABC, multiprocessing.Process):
         elif mode == Mode.DISTRIBUTED:
             pass
         else:
-            raise CoreException("Unknown mode: %s" % mode)
+            msg = "Unknown mode: {}".format(mode)
+            logging.error(msg)
+            raise CoreException(msg)
         self.main_loop(mode)
         logging.debug('finalizando os testes...')
         time.sleep(2)
 
     def initialize_participants_centralized(self):
-        # TODO add log
-        # plogging.info.plogging.info(self.configs)
+        logging.info("Tester: initializing participants")
         self.initialize_participant('strategy')
         self.initialize_participant('mediator')
         self.initialize_participant('environment')
         self.initialize_participant('agent')
         # TODO fix agent initialization
-        """
-        for i, cmd in enumerate(self.configs['run']['agents']):
-            self.initialize_participant("agent {}".format(i), cmd.split())
-        """
 
     def stop_participants(self):
+        logging.info("Tester: stopping participants")
         stop_message = str(self.messenger.build_stop_message())
         participants = ['strategy', 'mediator', 'environment', 'agent']
         for p in participants:
