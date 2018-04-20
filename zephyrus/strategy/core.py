@@ -53,8 +53,8 @@ class Strategy(abc.ABC, Process):
         self.ready()
 
     def ready(self):
-        logging.info('Strategy is ready.')
         while True:
+            logging.info('Strategy is ready.')
             msg = Message.from_string(self.socket_receive.recv_string())
             logging.debug("Strategy {}".format(str(msg)))
             if msg.type == 'START':
@@ -62,11 +62,11 @@ class Strategy(abc.ABC, Process):
             elif msg.type == 'CONFIG':
                 self.configure(msg.content)
             elif msg.type == 'STOP':
-                logging.info("Strategy recebeu mensagem de finalização de atividades.")
+                logging.info("Strategy received STOP message")
                 break
             else:
                 logging.debug(str(msg))
-                logging.warning("Strategy recebeu mensagem inválida.")
+                logging.warning("Strategy received invalid message")
 
     @abc.abstractmethod
     def mainloop(self):
@@ -75,6 +75,3 @@ class Strategy(abc.ABC, Process):
     @abc.abstractmethod
     def configure(self, config_data):
         pass
-
-
-
