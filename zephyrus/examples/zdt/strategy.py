@@ -16,7 +16,7 @@ class ZDTStrategy(Strategy):
         best_value = None
         for i in range(self.niter):
             solution = [random.random() for _ in range(self.niter)]
-            msg = self.messenger.build_evaluate_message(solution)
+            msg = self.messenger.build_evaluate_message(content=solution)
             self.socket_send.send_string(str(msg))
             ans = Message.from_string(self.socket_receive.recv_string())
             logging.debug('Received {}'.format(str(ans)))
@@ -30,7 +30,7 @@ class ZDTStrategy(Strategy):
         logging.debug('Strategy: best found {}'.format(best_value))
         logging.debug('Strategy: best solution {}'.format(best_solution))
         self.socket_send.send_string(str(self.messenger.build_stop_message()))
-        msg = self.messenger.build_result_message({
+        msg = self.messenger.build_result_message(content={
             'value': best_value,
             'solution': best_solution
         })

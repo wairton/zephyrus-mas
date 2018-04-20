@@ -45,23 +45,23 @@ class Message:
 class MessengerMeta(type):
     def __new__(cls, clsname, supercls, attr_dict):
         clsobj = super().__new__(cls, clsname, supercls, attr_dict)
-        if 'no_parameter_messages' not in attr_dict:
-            raise AttributeError("no_parameter_messages attribute must be defined")
-        for name, content in attr_dict['no_parameter_messages'].items():
-            fullname, body = MessengerMeta.get_method(name, content)
+        if 'basic_messages' not in attr_dict:
+            raise AttributeError("basic_messages attribute must be defined")
+        for name in attr_dict['basic_messages']:
+            fullname, body = MessengerMeta.get_method(name)
             setattr(clsobj, fullname, body)
         return clsobj
 
     @staticmethod
-    def get_method(name, msg_type):
+    def get_method(name):
         def method(self, receiver=None, content=None):
             receiver = receiver or self.default_receiver
-            return Message(self.sender, receiver, message_type=msg_type, content=content)
-        return 'build_{}_message'.format(name), method
+            return Message(self.sender, receiver, message_type=name.upper(), content=content)
+        return 'build_{}_message'.format(name.lower()), method
 
 
 class Messenger(metaclass=MessengerMeta):
-    no_parameter_messages = {}
+    basic_messages = []
 
     def __init__(self, sender: str, default_receiver: str = None):
         self.sender = sender

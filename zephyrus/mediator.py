@@ -9,11 +9,7 @@ from zephyrus.message import Message, Messenger
 
 
 class MediatorMessenger(Messenger):
-    no_parameter_messages = {
-        'start': 'START',
-        'reset': 'RESET',
-        'finish': 'FINISH'
-    }
+    basic_messages = ['START', 'RESET', 'FINISH']
 
 
 class Mediator(Process):

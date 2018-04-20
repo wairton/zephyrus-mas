@@ -15,17 +15,7 @@ from zephyrus.message import Message, Messenger
 
 
 class TesterMessenger(Messenger):
-    no_parameter_messages = {
-        'start': 'START',
-        'restart': 'RESTART',
-        'stop': 'STOP',
-    }
-
-    def build_config_message(self, config_data):
-        return Message(self.sender, message_type='CONFIG', content=config_data)
-
-    def build_result_message(self, result_content):
-        return Message(self.sender, message_type='RESULT', content=result_content)
+    basic_messages = ['START', 'RESTART', 'STOP', 'CONFIG', 'RESULT']
 
 
 # TODO we can do it better,
@@ -152,7 +142,7 @@ class Tester(ABC, multiprocessing.Process):
                 # TODO check if the message is from mediator or raise error
                 # TODO evaluate mediators message
                 logging.debug('evaluate, send answer to strategy')
-                result_message = self.messenger.build_result_message(result)
+                result_message = self.messenger.build_result_message(content=result)
                 self.sockets['strategy'].send_string(str(result_message))
         logging.debug('tester, waiting report...')
         msg = self.receive_message()
@@ -176,25 +166,26 @@ class Tester(ABC, multiprocessing.Process):
         pass
 
     def build_strategy_config_message(self):
-        return self.messenger.build_config_message(self.get_strategy_config())
+        return self.messenger.build_config_message(content=self.get_strategy_config())
 
     def get_strategy_config(self):
         return None
 
     def build_environment_config_message(self, strategy_data):
-        return self.messenger.build_config_message(self.get_environment_config(strategy_data))
+        return self.messenger.build_config_message(
+            receiver='environment', content=self.get_environment_config(strategy_data))
 
     def get_environment_config(self, content):
         return content
 
     def build_agent_config_message(self):
-        return self.messenger.build_config_message(self.get_agent_config())
+        return self.messenger.build_config_message(content=self.get_agent_config())
 
     def get_agent_config(self):
         return None
 
     def build_mediator_config_message(self):
-        return self.messenger.build_config_message(self.get_mediator_config())
+        return self.messenger.build_config_message(content=self.get_mediator_config())
 
     def get_mediator_config(self):
         return None

@@ -10,16 +10,7 @@ from zephyrus.message import Message, Messenger
 
 
 class StrategyMessenger(Messenger):
-    no_parameter_messages = {
-        'iteration': 'ITERATION',
-        'stop': 'STOP'
-    }
-
-    def build_evaluate_message(self, content):
-        return Message(self.sender, message_type='EVALUATE', content=content)
-
-    def build_result_message(self, content):
-        return Message(self.sender, message_type='RESULT', content=content)
+    basic_messages = ['ITERATION', 'STOP', 'EVALUATE', 'RESULT']
 
 
 class Strategy(abc.ABC, Process):
