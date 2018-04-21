@@ -29,7 +29,52 @@ class Mode(enum.Enum):
         return cls.__members__.get(name)
 
 
-class Tester(ABC, multiprocessing.Process):
+class BaseTester(ABC, multiprocessing.Process):
+    messenger_class = None
+
+    @property
+    def messenger(self):
+        if getattr(self, '_messenger', None) is None:
+            self._messenger = self.messenger_class('tester')
+        return self._messenger
+    def receive_message(self):
+        return Message.from_string(self.socket_receive.recv_string())
+
+    @abstractmethod
+    def evaluate(self, data):
+        pass
+
+    @abstractmethod
+    def report_result(self, msg):
+        pass
+
+    def build_strategy_config_message(self):
+        return self.messenger.build_config_message(content=self.get_strategy_config())
+
+    def get_strategy_config(self):
+        return None
+
+    def build_environment_config_message(self, strategy_data):
+        return self.messenger.build_config_message(
+            receiver='environment', content=self.get_environment_config(strategy_data))
+
+    def get_environment_config(self, content):
+        return content
+
+    def build_agent_config_message(self):
+        return self.messenger.build_config_message(content=self.get_agent_config())
+
+    def get_agent_config(self):
+        return None
+
+    def build_mediator_config_message(self):
+        return self.messenger.build_config_message(content=self.get_mediator_config())
+
+    def get_mediator_config(self):
+        return None
+
+
+class Tester(BaseTester):
     messenger_class = TesterMessenger
 
     def __init__(self, simulation_config, run_config, address_config, component_config=None):
@@ -41,12 +86,6 @@ class Tester(ABC, multiprocessing.Process):
         if component_config is not None:
             self.components = ComponentManager(component_config).enum
         self.sockets = {}
-
-    @property
-    def messenger(self):
-        if getattr(self, '_messenger', None) is None:
-            self._messenger = self.messenger_class('tester')
-        return self._messenger
 
     def initialize_participant(self, alias, cmd=None):
         if '<MANUAL>' not in self.configs['run'][alias]:
@@ -82,7 +121,7 @@ class Tester(ABC, multiprocessing.Process):
             logging.error(msg)
             raise CoreException(msg)
         self.main_loop(mode)
-        logging.debug('finalizando os testes...')
+        logging.debug('Tester: stopping.')
         time.sleep(2)
 
     def initialize_participants_centralized(self):
@@ -145,48 +184,6 @@ class Tester(ABC, multiprocessing.Process):
         logging.debug('tester, waiting report...')
         msg = self.receive_message()
         self.report_result(msg)
-
-    def receive_message(self):
-        return Message.from_string(self.socket_receive.recv_string())
-
-    def evaluate(self, data):
-        result = None
-        for item in data:
-            parsed_item = json.loads(item)
-            if parsed_item['type'] != 'RESULT':
-                continue
-            result = parsed_item['content']
-            break
-        return result
-
-    @abstractmethod
-    def report_result(self, msg):
-        pass
-
-    def build_strategy_config_message(self):
-        return self.messenger.build_config_message(content=self.get_strategy_config())
-
-    def get_strategy_config(self):
-        return None
-
-    def build_environment_config_message(self, strategy_data):
-        return self.messenger.build_config_message(
-            receiver='environment', content=self.get_environment_config(strategy_data))
-
-    def get_environment_config(self, content):
-        return content
-
-    def build_agent_config_message(self):
-        return self.messenger.build_config_message(content=self.get_agent_config())
-
-    def get_agent_config(self):
-        return None
-
-    def build_mediator_config_message(self):
-        return self.messenger.build_config_message(content=self.get_mediator_config())
-
-    def get_mediator_config(self):
-        return None
 
     # TODO: expandir para uma versão com roteiro
     def iniciar_simulacao(self, mode):
