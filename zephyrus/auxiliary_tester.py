@@ -2,6 +2,7 @@ import enum
 import json
 import logging
 import multiprocessing
+import random
 import subprocess
 import time
 from abc import abstractmethod
@@ -25,12 +26,17 @@ class AuxiliaryTester(BaseTester):
     def __init__(self, aux_id, run_config, address_config, component_config=None):
         super().__init__()
         self.aux_id = aux_id
-        self.configs = {}
-        self.configs['run'] = json.load(open(run_config))
+        self.configs = {
+            'run': json.load(open(run_config))
+        }
         self.participants = Participants(address_config)
         if component_config is not None:
             self.components = ComponentManager(component_config).enum
         self.sockets = {}
+
+    @property
+    def alias(self):
+        return 'tester_{}'.format(self.aux_id)
 
     def initialize_participant(self, alias, cmd=None):
         if '<MANUAL>' not in self.configs['run'][alias]:
@@ -49,14 +55,22 @@ class AuxiliaryTester(BaseTester):
         self.sockets[alias] = self.context.socket(zmq.PUSH)
         self.sockets[alias].connect(self.participants.address(alias))
 
-    def run(self):
+    def run2(self):
         logging.info('Auxiliary {} Tester: running.'.format(self.aux_id))
-        mode = Mode.from_string(self.configs['simulation']['mode'])
         self.context = zmq.Context()
         self.conectarComPrincipal()
         self.socket_receive = self.context.socket(zmq.PULL)
-        self.socket_receive.bind(self.participants.address('tester'))
+        self.socket_receive.bind(self.participants.address(self.alias))
         self.initialize_participants()
+        self.main_loop()
+        logging.debug('Auxiliary {} Tester: stopping'.format(self.aux_id))
+        time.sleep(2)
+
+    def run(self):
+        logging.info('Auxiliary {} Tester: running.'.format(self.aux_id))
+        self.context = zmq.Context()
+        self.socket_receive = self.context.socket(zmq.PULL)
+        self.socket_receive.bind(self.participants.address(self.alias))
         self.main_loop()
         logging.debug('Auxiliary {} Tester: stopping'.format(self.aux_id))
         time.sleep(2)
@@ -75,31 +89,82 @@ class AuxiliaryTester(BaseTester):
         for p in participants:
             self.sockets[p].send_string(stop_message)
 
-    def conectarComPrincipal(self):
-        contexto = zmq.Context()
-
+    def connect_foo(self):
         self.socketReceive = contexto.socket(zmq.PULL)
         eauxiliar = self.configuracao["eauxiliares"][self.auxId]
         pauxiliar = str(self._configuracao["pauxiliares"])
-        print "bind em: " + "tcp://"+ eauxiliar + ':' + pauxiliar
         self.socketReceive.bind("tcp://"+ eauxiliar + ':' + pauxiliar)
 
         self.socketSend = contexto.socket(zmq.PUSH)
         self.socketSend.connect("tcp://"+ self._configuracao["eprincipal"])
 
-        print "respostas para: " + "tcp://"+ self._configuracao["eprincipal"]
-
-        self.pipeTesteInteracaoA, self.pipeTesteInteracaoB = Pipe()
-        self.pipeTesteAmbienteA, self.pipeTesteAmbienteB = Pipe()
-
-        contexto = zmq.Context()
         self.socketSend = contexto.socket(zmq.PUSH)
         self.socketSend.bind('tcp://' + self.configuracao['testador'])
         self.socketReceive = contexto.socket(zmq.PULL)
         self.socketConfigure = contexto.socket(zmq.PUB)
 
     def main_loop(self):
-        pass
+        start_message = str(self.messenger.build_start_message())
+        stop_message = str(self.messenger.build_stop_message())
+
+        while True:
+            logging.debug('waiting message from main tester')
+            msg = self.receive_message()
+            logging.debug('Auxiliary Tester {}: received {}'.format(self.aux_id, str(msg)))
+            if msg.sender != 'tester':
+                logging.error('received message from {} instead of tester'.format(msg.sender))
+                # we shouldn't been receiving messages from any other sender at this point...
+                break
+            if msg.type == 'STOP':
+                logging.debug('stop participants')
+                break
+            elif msg.type == 'EVALUATE':
+                result = random.random()
+                result_message = self.messenger.build_result_message(content=result)
+                self.socket_main.send_string(str(result_message))
+
+
+    def main_loop2(self):
+        start_message = str(self.messenger.build_start_message())
+        stop_message = str(self.messenger.build_stop_message())
+
+        self.sockets['mediator'].send_string(str(self.build_mediator_config_message()))
+        while True:
+            logging.debug('waiting message from main tester')
+            msg = self.receive_message()
+            logging.debug('Auxiliary Tester {}: received {}'.format(self.aux_id, str(msg)))
+            if msg.sender != 'tester':
+                logging.error('received message from {} instead of tester'.format(msg.sender))
+                # we shouldn't been receiving messages from any other sender at this point...
+                break
+            if msg.type == 'STOP':
+                logging.debug('stop participants')
+                self.stop_participants()
+                break
+            elif msg.type == 'EVALUATE':
+                logging.debug('evaluate, lets configure environment')
+                environ_config = self.build_environment_config_message(msg.content)
+                self.sockets['environment'].send_string(str(environ_config))
+                # TODO this must work for multiple agents
+                logging.debug('evaluate, lets configure agent')
+                self.sockets['agent'].send_string(str(self.build_agent_config_message()))
+                self.sockets['mediator'].send_string(start_message)
+                self.sockets['agent'].send_string(start_message)
+                self.sockets['environment'].send_string(start_message)
+                logging.debug('evaluate, waiting for mediator\'s answer')
+                # a message from mediator is expected
+                msg = self.receive_message()
+                logging.debug('evaluate {}'.format(str(msg)))
+                result = self.evaluate(msg.content)
+
+                # TODO check if the message is from mediator or raise error
+                # TODO evaluate mediators message
+                logging.debug('evaluate, send answer to strategy')
+                result_message = self.messenger.build_result_message(content=result)
+                self.sockets['strategy'].send_string(str(result_message))
+        logging.debug('tester, waiting report...')
+        msg = self.receive_message()
+        self.report_result(msg)
 
 
 if __name__ == '__main__':
