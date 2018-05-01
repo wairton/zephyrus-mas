@@ -35,8 +35,13 @@ class BaseTester(ABC, multiprocessing.Process):
     @property
     def messenger(self):
         if getattr(self, '_messenger', None) is None:
-            self._messenger = self.messenger_class('tester')
+            self._messenger = self.messenger_class(self.alias)
         return self._messenger
+
+    @property
+    def alias(self):
+        return 'tester'
+
     def receive_message(self):
         return Message.from_string(self.socket_receive.recv_string())
 
@@ -115,7 +120,7 @@ class Tester(BaseTester):
         if mode == Mode.CENTRALIZED:
             self.initialize_participants_centralized()
         elif mode == Mode.DISTRIBUTED:
-            pass
+            self.initialize_participants_distributed()
         else:
             msg = "Unknown mode: {}".format(mode)
             logging.error(msg)
@@ -132,6 +137,14 @@ class Tester(BaseTester):
         self.initialize_participant('agent')
         # TODO fix agent initialization
 
+    def initialize_participants_distributed(self):
+        logging.info("Tester: initializing participants")
+        self.initialize_participant('strategy')
+        for participant int self.participants.aliases:
+            if not participant.startswith('tester_'):
+                continue
+            self.initialize_participant(participant)
+
     def stop_participants(self):
         logging.info("Tester: stopping participants")
         stop_message = str(self.messenger.build_stop_message())
@@ -140,6 +153,14 @@ class Tester(BaseTester):
             self.sockets[p].send_string(stop_message)
 
     def main_loop(self, mode):
+        result = None
+        if mode == Mode.CENTRALIZED:
+            result = self.main_loop_centralized()
+        elif mode == Mode.DISTRIBUTED:
+            result = self.main_loop_distributed()
+        return result
+
+    def main_loop_centralized(self):
         """
         """
         start_message = str(self.messenger.build_start_message())
@@ -153,7 +174,7 @@ class Tester(BaseTester):
             msg = self.receive_message()
             logging.debug('Tester received {}'.format(str(msg)))
             if msg.sender != 'strategy':
-                logging.debug('received message from {} instead of strategy'.format(msg.sender))
+                logging.error('received message from {} instead of strategy'.format(msg.sender))
                 # we shouldn't been receiving messages from any other sender at this point...
                 break
             if msg.type == 'STOP':
@@ -184,6 +205,66 @@ class Tester(BaseTester):
         logging.debug('tester, waiting report...')
         msg = self.receive_message()
         self.report_result(msg)
+
+
+    def receive_message_from_poller(self, poller, socket, timeout):
+        result = poller.poll(timeout)
+        if socket in result:
+            return Message.from_string(socket.recv_string())
+        return None
+
+    def main_loop_distributed(self):
+        """
+        """
+        start_message = str(self.messenger.build_start_message())
+        stop_message = str(self.messenger.build_stop_message())
+
+        self.sockets['strategy'].send_string(str(self.build_strategy_config_message()))
+        self.sockets['strategy'].send_string(start_message)
+
+
+        available_testers = []
+
+        poller = zmq.Poller()
+        poller.register(self.socket_receive)
+
+        while True:
+            logging.debug('waiting message from strategy')
+            msg = self.receive_message()
+            logging.debug('Tester received {}'.format(str(msg)))
+            if msg.sender != 'strategy':
+                logging.error('received message from {} instead of strategy'.format(msg.sender))
+                # we shouldn't been receiving messages from any other sender at this point...
+                break
+            if msg.type == 'STOP':
+                logging.debug('stop participants')
+                self.stop_participants()
+                break
+            elif msg.type == 'EVALUATE':
+                logging.debug('evaluate, lets configure environment')
+                environ_config = self.build_environment_config_message(msg.content)
+                self.sockets['environment'].send_string(str(environ_config))
+                # TODO this must work for multiple agents
+                logging.debug('evaluate, lets configure agent')
+                self.sockets['agent'].send_string(str(self.build_agent_config_message()))
+                self.sockets['mediator'].send_string(start_message)
+                self.sockets['agent'].send_string(start_message)
+                self.sockets['environment'].send_string(start_message)
+                logging.debug('evaluate, waiting for mediator\'s answer')
+                # a message from mediator is expected
+                msg = self.receive_message()
+                logging.debug('evaluate {}'.format(str(msg)))
+                result = self.evaluate(msg.content)
+
+                # TODO check if the message is from mediator or raise error
+                # TODO evaluate mediators message
+                logging.debug('evaluate, send answer to strategy')
+                result_message = self.messenger.build_result_message(content=result)
+                self.sockets['strategy'].send_string(str(result_message))
+        logging.debug('tester, waiting report...')
+        msg = self.receive_message()
+        self.report_result(msg)
+        poller.unregister(self.socket_receive)
 
     # TODO: expandir para uma versão com roteiro
     def iniciar_simulacao(self, mode):
