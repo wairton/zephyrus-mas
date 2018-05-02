@@ -11,6 +11,8 @@ from zephyrus.message import Message
 
 
 class Agent(abc.ABC, Process):
+    messenger_class = None
+
     def __init__(self, ag_id, address_config, component_config=None):
         super().__init__()
         self.id = ag_id
@@ -20,9 +22,24 @@ class Agent(abc.ABC, Process):
         self.mediator_address = participants.address('mediator')
         self.socket_receive = None
         self.socket_send = None
+        self._messenger = None
         # internal state
         if component_config is not None:
             self.components = c = ComponentManager(component_config).enum
+
+    @property
+    def alias(self):
+        return "agent_{}".format(self.id)
+
+    @property
+    def messenger(self):
+        if self._messenger is not None:
+            return self._messenger
+        elif self.messenger_class is None:
+            raise ZephyrusException("messenger_class must be defined")
+        else:
+            self._messenger = self.messenger_class(self.alias)
+        return self._messenger
 
     @abc.abstractmethod
     def perceive(self, perceived_data):
