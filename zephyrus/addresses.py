@@ -13,7 +13,7 @@ class Participants:
         self._aliases = {v: k for k, v in self._addresses.items()}
 
     def alias(self, address):
-        return self.aliases[address]
+        return self._aliases[address]
 
     @property
     def aliases(self):

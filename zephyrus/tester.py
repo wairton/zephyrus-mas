@@ -140,7 +140,7 @@ class Tester(BaseTester):
     def initialize_participants_distributed(self):
         logging.info("Tester: initializing participants")
         self.initialize_participant('strategy')
-        for participant int self.participants.aliases:
+        for participant in self.participants.aliases:
             if not participant.startswith('tester_'):
                 continue
             self.initialize_participant(participant)

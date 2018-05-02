@@ -21,14 +21,12 @@ def test_message():
 
 def test_no_parameter_methods_generation():
     class TMessenger(Messenger):
-        no_parameter_messages = {
-            'lob': 'law'
-        }
+        basic_messages = ['law']
 
     t = TMessenger('bob')
-    assert hasattr(t, 'build_lob_message')
-    lob_message = t.build_lob_message()
+    assert hasattr(t, 'build_law_message')
+    lob_message = t.build_law_message()
     assert lob_message.sender == 'bob'
     assert lob_message.receiver is None
-    assert lob_message.type == 'law'
+    assert lob_message.type == 'LAW'
     assert lob_message.content is None
