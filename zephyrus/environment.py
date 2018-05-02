@@ -11,14 +11,25 @@ from zephyrus.message import Message
 
 
 class Environment(abc.ABC, Process):
+    messenger_class = None
+
     def __init__(self, participants_config, components_config=None):
         super().__init__()
         # TODO: give a better name
         self.places = []
         self.agent_positions = {}
         self.participants = Participants(participants_config)
+        self._messenger = None
         if components_config is not None:
             self.components = ComponentManager(components_config).enum
+
+    @property
+    def messenger(self):
+        if self._messenger is None:
+            if self.messenger_class is None:
+                raise ZephyrusException("Calling 'messenger' without defining 'messenger_class'")
+            self._messenger = self.messenger_class('Environment')
+        return self._messenger
 
     def run(self):
         # TODO add log
