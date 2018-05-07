@@ -56,7 +56,6 @@ class ComponentSet(Composable):
     def __isub__(self, other):
         return self - other
 
-    @cast_component_set
     def __repr__(self):
         return "<ComponentSet value={}>".format(self.value)
 
@@ -143,7 +142,7 @@ class ComponentEnum:
 
 
 class ComponentManager:
-    def __init__(self, component_enum):
+    def __init__(self, component_enum: ComponentEnum):
         self.enum = component_enum
 
     @classmethod
