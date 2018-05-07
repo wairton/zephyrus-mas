@@ -20,19 +20,19 @@ class VaccumEnvironment(Environment):
             msg = Message.from_string(self.socket_receive.recv_string())
             logging.debug('Environment: received {}'.format(msg))
             if msg.type == 'PERCEIVE':
-                acao = self.handle_perceive_action(msg.sender)
+                reply = self.handle_perceive_action(msg.sender)
             elif msg.type == 'MOVE':
-                acao = self(msg.sender, msg.content)
+                reply = self.handle_move_action(msg.sender, msg.content)
             elif msg.type == 'CLEAN':
-                acao = self.handle_clean_action(msg.sender)
+                reply = self.handle_clean_action(msg.sender)
             elif msg.type == 'RECHARGE':
-                acao = self.rhandle_recharge_action(msg.sender)
+                reply = self.handle_recharge_action(msg.sender)
             elif msg.type == 'DEPOSIT':
-                acao = self.handle_deposit_action(msg.sender)
+                reply = self.handle_deposit_action(msg.sender)
             elif msg.type == 'STOP':
-                acao = self.handle_stop_action(msg.sender)
+                reply = self.handle_stop_action(msg.sender)
                 if len(self.posAgentes) == 0:
-                    msg = "%s %s %s" % (self.id, agid, acao)
+                    msg = "%s %s %s" % (self.id, agid, reply)
                     # print 'ambiente enviou %s' % (msg), time.time()
                     self.socket_send.send(msg)
                     msg = "%s %s %s" % (self.id, -1, "# ## ")
@@ -42,9 +42,8 @@ class VaccumEnvironment(Environment):
                 # TODO: como o ambiente para?
             else:
                 logging.error("Environmnent: received an invalid message '{}'".format(msg))
-            msg = "%s %s %s" % (self.id, agid, acao)
-            # print 'ambiente enviou %s' % (msg), time.time()
-            self.socket_send.send(msg)
+            logging.debug('Environment: answered {}'.format(reply))
+            self.socket_send.send_string(str(reply))
 
     def load_from_file(self, filename):
         with open(filename) as conf_file:
@@ -68,74 +67,67 @@ class VaccumEnvironment(Environment):
         nlinhas = ncolunas = resolution
         for i in range(nlinhas):
             de, ate = ncolunas * i, ncolunas * (i + 1)
-            self.estrutura.append(novaEstrutura[de:ate])
+            self.places.append(novaEstrutura[de:ate])
         self.nlinhas, self.ncolunas = nlinhas, ncolunas
 
-    def adicionarAgente(self, idAgente, x, y):
-        # TODO: checar se a posicao do agente é válida
-        # print 'AMBIENTE: adicionado agente %s em %s %s' % (idAgente, x, y)
-        # print self.estrutura
-        self.posAgentes[idAgente] = (x, y)
-        self.estrutura[x][y] = self.componentes.adicionarVarios(['AG03', 'AG'], self.estrutura[x][y])
+    def add_agent(self, agid, x, y):
+        if 0 > x or len(self.places) <= x or 0 > y or len(self.places[0]) <= y:
+            msg = "Environment: Trying to add an agent at an invalid position ({})".format((x, y))
+            logging.error(msg)
+            raise ZephyrusException(msg)
+        loggin.debug("Environment: Added {} at ({})".format(agid, (x, y)))
+        self.agent_positions[agid] = (x, y)
+        self.places[x][y] += self.components.AG
 
-    def handle_move_action(self, iden, direcao):
-        if direcao < 0 or direcao > 3:
-            # TODO: notificar passagem de valor inválido.
-            pass
-        else:
-            # não considera o caso em que o agente sai dos limites...
-            x, y = None, None
-            if iden in self.posAgentes.keys():
-                x, y = self.posAgentes[iden]
-            # print 'em', x, y
-            if direcao == 0:
-                # print 'para cima'
-                if self.componentes.checar('PAREDEN', self.estrutura[x][y]) or self.componentes.checar('AG', self.estrutura[x - 1][y]):
-                    return "colidiu"
-                self.posAgentes[iden] = x - 1, y
-                self.estrutura[x - 1][y] = self.componentes.adicionar('AG', self.estrutura[x - 1][y])
-            elif direcao == 1:
-                # print 'para direita'
-                if self.componentes.checar('PAREDEL', self.estrutura[x][y]) or self.componentes.checar('AG', self.estrutura[x][y + 1]):
-                    return "colidiu"
-                self.posAgentes[iden] = x, y + 1
-                self.estrutura[x][y + 1] = self.componentes.adicionar('AG', self.estrutura[x][y + 1])
-            elif direcao == 2:
-                # print 'para baixo'
-                if self.componentes.checar('PAREDES', self.estrutura[x][y]) or self.componentes.checar('AG', self.estrutura[x + 1][y]):
-                    return "colidiu"
-                self.posAgentes[iden] = x + 1, y
-                self.estrutura[x + 1][y] = self.componentes.adicionar('AG', self.estrutura[x + 1][y])
-            elif direcao == 3:
-                # print 'para esquerda'
-                if self.componentes.checar('PAREDEO', self.estrutura[x][y]) or self.componentes.checar('AG', self.estrutura[x][y - 1]):
-                    return "colidiu"
-                self.posAgentes[iden] = x, y - 1
-                self.estrutura[x][y - 1] = self.componentes.adicionar('AG', self.estrutura[x][y - 1])
+    def handle_move_action(self, agid, direction):
+        if agid not in self.agent_positions.keys():
+            # TODO: exception and log
+            raise ZephyrusException()
+        x, y = self.agent_positions[agid]
+        if direction == 0:
+            if self.components.WALLN in self.places[x][y] or self.components.AG in self.places[x - 1][y]:
+                return self.reject_message(agid)
+            self.agent_positions[agid] = x - 1, y
+            self.places[x - 1][y] += self.components.AG
+        elif direction == 1:
+            if self.components.WALLE in self.places[x][y] or self.components.AG in self.places[x][y + 1]:
+                return self.reject_message(agid)
+            self.agent_positions[agid] = x, y + 1
+            self.places[x][y + 1] += self.components.AG
+        elif direction == 2:
+            if self.components.WALLS in self.places[x][y] or self.components.AG in self.places[x + 1][y]:
+                return self.reject_message(agid)
+            self.agent_positions[agid] = x + 1, y
+            self.places[x + 1][y] += self.components.AG
+        elif direction == 3:
+            if self.components.WALLW in self.places[x][y] or self.components.AG in self.places[x][y - 1]:
+                return self.reject_message(agid)
+            self.agent_positions[agid] = x, y - 1
+            self.places[x][y - 1] += self.components.AG
 
-            self.estrutura[x][y] = self.componentes.remover('AG', self.estrutura[x][y])
-            return "moveu"
+        self.places[x][y] -= self.components.AG
+        return self.confirm_message(agid)
 
     def handle_clean_action(self, agid):
         x, y = self.posAgentes[iden]
-        if self.componentes.checar('LIXO', self.estrutura[x][y]):
-            self.estrutura[x][y] = self.componentes.remover('LIXO', self.estrutura[x][y])
+        if self.components.TRASH in self.places[x][y]:
+            self.places[x][y] -= self.components.TRASH
             return self.confirm_message(agid)
         return self.reject_message(agid)
 
     def handle_perceive_action(self, agid):
         x, y = self.posAgentes[iden]
-        return self.confirm_message(agid, self.estrutura[x][y])
+        return self.confirm_message(agid, self.places[x][y])
 
     def handle_recharge_action(self, agid):
         x, y = self.posAgentes[agid]
-        if self.componentes.checar('RECARGA', self.estrutura[x][y]):
+        if self.components.RECHARGE in self.places[x][y]:
             return self.confirm_message(agid)
         return self.reject_message(agid)
 
     def handle_deposit_action(self, agid):
         x, y = self.posAgentes[agid]
-        if self.componentes.checar('LIXEIRA', self.estrutura[x][y]):
+        if self.components.BIN in self.places[x][y]:
             return self.confirm_message(agid)
         return self.reject_message(agid)
 
@@ -151,18 +143,18 @@ class VaccumEnvironment(Environment):
 
     def draw(self):
         ret = []
-        for linha in self.estrutura:
-            for item in linha:
-                info = filter(lambda k: self.componentes.checar(k, item), ['LIXEIRA', 'LIXO', 'RECARGA', 'AG'])
-                if 'AG' in info:
+        for place_row in self.places:
+            for place in place_row:
+                if self.components.AG in place:
                     ret.append('a')
                 else:
                     ret.append('_')
-                if 'LIXEIRA' in info:
+                #
+                if self.components.BIN in place:
                     ret.append('u')
-                elif 'LIXO' in info:
+                elif self.components.TRASH in place:
                     ret.append('*')
-                elif 'RECARGA' in info:
+                elif self.components.RECHARGE in place:
                     ret.append('$')
                 else:
                     ret.append('_')
