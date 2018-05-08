@@ -31,9 +31,8 @@ class VaccumEnvironment(Environment):
                 reply = self.handle_deposit_action(msg.sender)
             elif msg.type == 'STOP':
                 reply = self.handle_stop_action(msg.sender)
-                if len(self.posAgentes) == 0:
+                if len(self.agent_positions) == 0:
                     msg = "%s %s %s" % (self.id, agid, reply)
-                    # print 'ambiente enviou %s' % (msg), time.time()
                     self.socket_send.send(msg)
                     msg = "%s %s %s" % (self.id, -1, "# ## ")
                     self.socket_send.send(msg)
@@ -45,30 +44,25 @@ class VaccumEnvironment(Environment):
             logging.debug('Environment: answered {}'.format(reply))
             self.socket_send.send_string(str(reply))
 
-    def load_from_file(self, filename):
-        with open(filename) as conf_file:
-            for line in conf_file:
-                self.places.append([int(i) for i in line.strip().split()])
-        self.nlines, self.ncols = len(self.places), len(self.places[0])
-
-    def load_from_array(self, array):
+    def configure(self, content):
         self.places = []
-        # NOTE: esse comando deveria ser aqui?
         self.agent_positions = {}
-        array = array.split()
-        self.nlines = nlines = int(array[0])
-        self.ncols = ncols = int(array[1])
-        for i in range(nlines):
-            start, end = 2 + ncols * i, 2 + ncols * (i + 1)
-            self.places.append([int(i) for i in array[start:end]])
 
-    def reconstruir(self, novaEstrutura, resolution):
-        # turns a list into a matrix of resolution X resolution
-        nlinhas = ncolunas = resolution
-        for i in range(nlinhas):
-            de, ate = ncolunas * i, ncolunas * (i + 1)
-            self.places.append(novaEstrutura[de:ate])
-        self.nlinhas, self.ncolunas = nlinhas, ncolunas
+        initial = content['initial']
+        scenario = content['scenario']
+        agents = content['agents']
+        if len(agents) > 1:
+            logging.error("Environment: More than one agent found, this feature isn't implemented yet!")
+        nrow = len(initial)
+        ncols = len(initial[0])
+        for i in range(nrows):
+            row = []
+            for j in range(ncols):
+                row.append(ComponentSet(initial[i][j]) + ComponentSet(scenario[i][j]))
+                # FIXME: This DOESN'T work for multiple agents!!!
+                if self.components.AG in row[-1]:
+                    self.agent_positions[agents[0]] = (i, j)
+            self.places.append(row)
 
     def add_agent(self, agid, x, y):
         if 0 > x or len(self.places) <= x or 0 > y or len(self.places[0]) <= y:
@@ -109,30 +103,30 @@ class VaccumEnvironment(Environment):
         return self.confirm_message(agid)
 
     def handle_clean_action(self, agid):
-        x, y = self.posAgentes[iden]
+        x, y = self.agent_positions[agid]
         if self.components.TRASH in self.places[x][y]:
             self.places[x][y] -= self.components.TRASH
             return self.confirm_message(agid)
         return self.reject_message(agid)
 
     def handle_perceive_action(self, agid):
-        x, y = self.posAgentes[iden]
+        x, y = self.agent_positions[agid]
         return self.confirm_message(agid, self.places[x][y])
 
     def handle_recharge_action(self, agid):
-        x, y = self.posAgentes[agid]
+        x, y = self.agent_positions[agid]
         if self.components.RECHARGE in self.places[x][y]:
             return self.confirm_message(agid)
         return self.reject_message(agid)
 
     def handle_deposit_action(self, agid):
-        x, y = self.posAgentes[agid]
+        x, y = self.agent_positions[agid]
         if self.components.BIN in self.places[x][y]:
             return self.confirm_message(agid)
         return self.reject_message(agid)
 
     def handle_stop_action(self, agid):
-        del self.posAgentes[agid]
+        del self.agent_positions[agid]
         return self.confirm_message(agid)
 
     def confirm_message(agid, content=None):
