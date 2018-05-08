@@ -1,6 +1,8 @@
-import zmq
+import logging
 
+from zephyrus.components import ComponentSet
 from zephyrus.environment import Environment
+from zephyrus.exceptions import ZephyrusException
 from zephyrus.message import Message, Messenger
 
 
@@ -9,7 +11,7 @@ class EnvironmentMessenger(Messenger):
 
 
 class VaccumEnvironment(Environment):
-   messenger_class = EnvironmentMessenger
+    messenger_class = EnvironmentMessenger
 
     def reset_memory(self):
         self.places = []
@@ -32,11 +34,7 @@ class VaccumEnvironment(Environment):
             elif msg.type == 'STOP':
                 reply = self.handle_stop_action(msg.sender)
                 if len(self.agent_positions) == 0:
-                    msg = "%s %s %s" % (self.id, agid, reply)
-                    self.socket_send.send(msg)
-                    msg = "%s %s %s" % (self.id, -1, "# ## ")
-                    self.socket_send.send(msg)
-                    self.reiniciarMemoria()
+                    # TODO
                     break
                 # TODO: como o ambiente para?
             else:
@@ -47,13 +45,12 @@ class VaccumEnvironment(Environment):
     def configure(self, content):
         self.places = []
         self.agent_positions = {}
-
         initial = content['initial']
         scenario = content['scenario']
         agents = content['agents']
         if len(agents) > 1:
             logging.error("Environment: More than one agent found, this feature isn't implemented yet!")
-        nrow = len(initial)
+        nrows = len(initial)
         ncols = len(initial[0])
         for i in range(nrows):
             row = []
@@ -69,7 +66,7 @@ class VaccumEnvironment(Environment):
             msg = "Environment: Trying to add an agent at an invalid position ({})".format((x, y))
             logging.error(msg)
             raise ZephyrusException(msg)
-        loggin.debug("Environment: Added {} at ({})".format(agid, (x, y)))
+        logging.debug("Environment: Added {} at ({})".format(agid, (x, y)))
         self.agent_positions[agid] = (x, y)
         self.places[x][y] += self.components.AG
 
@@ -98,7 +95,6 @@ class VaccumEnvironment(Environment):
                 return self.reject_message(agid)
             self.agent_positions[agid] = x, y - 1
             self.places[x][y - 1] += self.components.AG
-
         self.places[x][y] -= self.components.AG
         return self.confirm_message(agid)
 
@@ -129,10 +125,10 @@ class VaccumEnvironment(Environment):
         del self.agent_positions[agid]
         return self.confirm_message(agid)
 
-    def confirm_message(agid, content=None):
+    def confirm_message(self, agid, content=None):
         return self.messenger.build_confirm_message(receiver=agid, content=content)
 
-    def reject_message(agid, content=None):
+    def reject_message(self, agid, content=None):
         return self.messenger.build_reject_message(receiver=agid, content=content)
 
     def draw(self):
@@ -152,7 +148,6 @@ class VaccumEnvironment(Environment):
                     ret.append('$')
                 else:
                     ret.append('_')
-                ret.append(char)
             ret.append('\n')
         ret.append('\n')
         return ''.join(ret)
