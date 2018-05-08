@@ -23,7 +23,6 @@ class SimulationSection(ConfigSection):
 
 class StandardScenarioParameter(AutoParameter):
     def parser(self, parameters, _globals):
-        print(parameters, _globals)
         resolution = parameters['resolution']
         enum = ComponentManager.get_component_enum(_globals['components_filename'])
         scenario = []
@@ -52,9 +51,9 @@ class AgentSection(ConfigSection):
 
 class VaccumConfigBuilder(ConfigBuilder):
     sections = [
-        LogSection,
-        AgentSection,
-        SimulationSection
+        LogSection('log'),
+        AgentSection('agent'),
+        SimulationSection('simulation')
     ]
 
     def __init__(self, components_filename):

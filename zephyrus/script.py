@@ -36,7 +36,7 @@ class Parameter:
         self.parser = parser
 
     def __call__(self, *args, **kwargs):
-        return self.parser(input(self.message))
+        return self.parser(input("{}: ".format(self.message.strip(": "))))
 
 
 # TODO get a better name for this
@@ -53,25 +53,28 @@ class AutoParameter(abc.ABC):
 
 
 class ConfigSection:
-    def __init__(self, _globals=None):
-        self.globals = _globals
+    def __init__(self, name):
+        self.name = name
 
-    def get_dict(self):
+    def get_dict(self, _globals):
         section = {}
         for parameter in self.parameters:
-            section[parameter.name] = parameter(parameters=section, _globals=self.globals)
-            print('section', section)
+            section[parameter.name] = parameter(parameters=section, _globals=_globals)
         return section
 
 
 class ConfigBuilder:
-    def get_dict(self):
+    def get_dict(self, nested=True):
         config = {}
         _globals = getattr(self, 'globals', {})
         for section in self.sections:
-            config.update(section(_globals).get_dict())
+            if nested:
+                config[section.name] = section.get_dict(_globals)
+            else:
+                config.update(self.get_dict(_globals))
         return config
 
-    def generate_config_file(self, filename):
+    def generate_config_file(self, filename, nested=True):
         with open(filename, 'w') as output:
-            json.dump(self.get_dict(), output)
+            json.dump(self.get_dict(nested), output, sort_keys=True, indent=2)
+        print("config generated at {}".format(filename))
