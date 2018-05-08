@@ -45,29 +45,33 @@ class AutoParameter(abc.ABC):
         self.name = name
 
     def __call__(self, *args, parameters, **kwargs):
-        return self.parser(parameters)
+        return self.parser(parameters, **kwargs)
 
     @abc.abstractmethod
-    def parser(self, parameters):
+    def parser(self, parameters, **kwargs):
         pass
 
 
 class ConfigSection:
-    @classmethod
-    def get_dict(cls):
+    def __init__(self, _globals=None):
+        self.globals = _globals
+
+    def get_dict(self):
         section = {}
-        for parameter in cls.parameters:
-            section[parameter.name] = parameter(parameters=section)
+        for parameter in self.parameters:
+            section[parameter.name] = parameter(parameters=section, _globals=self.globals)
+            print('section', section)
         return section
 
 
 class ConfigBuilder:
     def get_dict(self):
         config = {}
+        _globals = getattr(self, 'globals', {})
         for section in self.sections:
-            config.update(section.get_dict())
+            config.update(section(_globals).get_dict())
         return config
 
     def generate_config_file(self, filename):
         with open(filename, 'w') as output:
-            json.dump(output, self.get_dict())
+            json.dump(self.get_dict(), output)

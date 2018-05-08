@@ -22,9 +22,10 @@ class SimulationSection(ConfigSection):
 
 
 class StandardScenarioParameter(AutoParameter):
-    def parser(self, parameters):
+    def parser(self, parameters, _globals):
+        print(parameters, _globals)
         resolution = parameters['resolution']
-        enum = ComponentManager.get_component_enum('componentes.js')
+        enum = ComponentManager.get_component_enum(_globals['components_filename'])
         scenario = []
         scenario.append((enum.WALLN + enum.WALLW).value)
         scenario.extend(enum.WALLN.value for _ in range(resolution - 2))
@@ -62,7 +63,7 @@ class VaccumConfigBuilder(ConfigBuilder):
 
 # simulation.json
 if __name__ == '__main__':
-    VaccumConfigBuilder().generate_config_file(sys.argv[1])
+    VaccumConfigBuilder(sys.argv[1]).generate_config_file(sys.argv[2])
     """
     if len(sys.argv) < 3:
         print('uso: criarRoteiro.py nomeRoteiro nActivities')
