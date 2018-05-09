@@ -3,6 +3,7 @@ import logging
 import math
 import random
 
+from zephyrus.components import ComponentManager
 from zephyrus.message import Message
 from zephyrus.strategy import Strategy
 from zephyrus.strategy.nsga2 import Nsga2, Solution
@@ -39,20 +40,20 @@ class VacuumSolution(Solution):
     def __str__(self):
         return repr(self.chromossome)
 
-    def decode(self, componentes):
+    def decode(self, components):
         decoded = []
         for gene in self.chromossome:
             value = 0
             if gene == 1:
-                value = componentes.adicionar('LIXO', 0)
+                value = components.TRASH.value
             elif gene == 2:
-                value = componentes.adicionar('LIXEIRA', 0)
+                value = components.BIN.value
             elif gene == 3:
-                value = componentes.adicionar('RECARGA', 0)
+                value = components.RECHARGE.value
             elif gene == 4:
-                value = componentes.adicionarVarios(['AG','AG03'], 0)
+                value = components.AG.value
             else:
-                pass #TODO: raise an exception here?
+                raise ZephyrusException("Decode error: unknown value {}".format(gene))
             decoded.append(value)
         return decoded
 
@@ -124,7 +125,7 @@ class VacuumSolution(Solution):
 
 
 class VaccumCleanerNsga2(Nsga2):
-    def __init__(self, npop, max_iterations):
+    def __init__(self, npop, max_iterations, component_config):
         super().__init__(npop, max_iterations)
         self.nagentes = 0
         self.resolution = 0
@@ -133,7 +134,7 @@ class VaccumCleanerNsga2(Nsga2):
         self.ncarga = 0
         self._evaluator = None
 
-        self.componentes = Componentes('componentes.js')
+        self.components = ComponentManager.get_component_enum(component_config)
         configuracao = json.load(open('configuracao.js'))
         self.mainlog = configuracao['mainlog']
         self.poplog = configuracao['poplog']
@@ -184,7 +185,7 @@ class VaccumCleanerNsga2(Nsga2):
         random.shuffle(chromossome)
         individual = VacuumSolution(SolutionType.MIN)
         individual.chromossome = chromossome
-        individual.objectives = self.evaluator(individual.decode(self.componentes))
+        individual.objectives = self.evaluator(individual.decode(self.components))
         return individual
 
     def salvar(self, destino):
@@ -206,7 +207,7 @@ class VaccumCleanerNsga2(Nsga2):
             new_population.append(selected[i].reproduction(selected[i - 1], self.crossover_prob, self.mutation_prob, self.resolution, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
         for individual in new_population:
             if individual.objectives == None:
-                individual.objectives = self.evaluator(individual.decode(self.componentes))
+                individual.objectives = self.evaluator(individual.decode(self.components))
         return new_population
 
     def binary_tournament(self, pop):
