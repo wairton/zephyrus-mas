@@ -32,11 +32,36 @@ class Script(list):
 class Parameter:
     def __init__(self, name, message, parser):
         self.name = name
-        self.message = message
+        self.message = message.strip(": ")
         self.parser = parser
 
     def __call__(self, *args, **kwargs):
-        return self.parser(input("{}: ".format(self.message.strip(": "))))
+        return self.parser(input("{}: ".format(self.message)))
+
+
+class ChoiceParameter:
+    def __init__(self, name, message, options):
+        self.name = name
+        self.message = message.strip(": ")
+        self.options = options
+
+    def __call__(self, *args, **kwargs):
+        option_text = '|'.join(self.options)
+        match = None
+        while True:
+            chosen = input("{}({}): ".format(self.message, option_text))
+            match = self.closest_match(chosen)
+            if match is not None:
+                break
+            msg_template = "{} is not a valid options, please choose one from {}"
+            print(msg_template.format(chosen, ' '.join(self.options)))
+        return match
+
+    def closest_match(self, text):
+        for item in self.options:
+            if item.upper() == text.upper() or item.upper().startswith(text.upper()):
+                return item
+        return None
 
 
 # TODO get a better name for this
@@ -78,3 +103,15 @@ class ConfigBuilder:
         with open(filename, 'w') as output:
             json.dump(self.get_dict(nested), output, sort_keys=True, indent=2)
         print("config generated at {}".format(filename))
+
+
+class DefaultSimulationSection(ConfigSection):
+    parameters = [
+        ChoiceParameter('mode', "Operating mode", ['CENTRALIZED', 'DISTRIBUTED'])
+    ]
+
+
+class DefaultConfigBuilder(ConfigBuilder):
+    sections = [
+        DefaultSimulationSection('simulation')
+    ]

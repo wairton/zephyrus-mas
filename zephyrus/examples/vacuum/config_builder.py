@@ -1,7 +1,7 @@
 import sys
 
-from zephyrus.script import ConfigSection, Parameter, AutoParameter, ConfigBuilder
 from zephyrus.components import ComponentManager
+from zephyrus.script import ConfigSection, Parameter, AutoParameter, ConfigBuilder, DefaultSimulationSection
 
 
 class LogSection(ConfigSection):
@@ -12,7 +12,7 @@ class LogSection(ConfigSection):
     ]
 
 
-class SimulationSection(ConfigSection):
+class StrategySection(ConfigSection):
     parameters = [
         Parameter('n_generations', 'Number of generations (int)', int),
         Parameter('population_size', 'Population size (int)', int),
@@ -39,7 +39,7 @@ class StandardScenarioParameter(AutoParameter):
         return ' '.join(map(str, scenario))
 
 
-class AgentSection(ConfigSection):
+class EnvironmentSection(ConfigSection):
     parameters = [
         Parameter('n_trash', 'Quantity of trash (int)', int),
         Parameter('n_bin', 'Quantity of trash bin (int)', int),
@@ -52,25 +52,17 @@ class AgentSection(ConfigSection):
 class VaccumConfigBuilder(ConfigBuilder):
     sections = [
         LogSection('log'),
-        AgentSection('agent'),
-        SimulationSection('simulation')
+        EnvironmentSection('environment'),
+        StrategySection('strategy'),
+        DefaultSimulationSection('simulation')
     ]
 
     def __init__(self, components_filename):
         self.globals = {'components_filename': components_filename}
 
 
-# simulation.json
 if __name__ == '__main__':
-    VaccumConfigBuilder(sys.argv[1]).generate_config_file(sys.argv[2])
-    """
-    if len(sys.argv) < 3:
-        print('uso: criarRoteiro.py nomeRoteiro nActivities')
+    if len(sys.argv) != 3:
+        print("Usage config_builder.py component_config output_file")
         sys.exit(1)
-    r = Roteiro(sys.argv[1])
-    for i in range(int(sys.argv[2])):
-        r.add(make_activity())
-    r.save()
-    print('roteiro criado: ')
-    r.listItems()
-    """
+    VaccumConfigBuilder(sys.argv[1]).generate_config_file(sys.argv[2])
