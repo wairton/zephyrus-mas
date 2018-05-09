@@ -64,7 +64,8 @@ class ChoiceParameter:
         return None
 
 
-# TODO get a better name for this
+# TODO get a better name for this. We call it 'auto' because
+# it is an auto-generated value.
 class AutoParameter(abc.ABC):
     def __init__(self, name):
         self.name = name
@@ -75,6 +76,15 @@ class AutoParameter(abc.ABC):
     @abc.abstractmethod
     def parser(self, parameters, **kwargs):
         pass
+
+
+class ConstantParameter:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __call__(self, *args, **kwargs):
+        return self.value
 
 
 class ConfigSection:

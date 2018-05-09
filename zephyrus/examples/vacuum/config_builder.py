@@ -1,27 +1,27 @@
 import sys
 
 from zephyrus.components import ComponentManager
-from zephyrus.script import ConfigSection, Parameter, AutoParameter, ConfigBuilder, DefaultSimulationSection
+import zephyrus.script as sc
 
 
-class LogSection(ConfigSection):
+class LogSection(sc.ConfigSection):
     parameters = [
-        Parameter('main_log', 'Main log filename(str)', str),
-        Parameter('population_log', 'Population log filename (str)', str),
-        Parameter('final_population_log', 'Final population log (str)', str)
+        sc.Parameter('main_log', 'Main log filename(str)', str),
+        sc.Parameter('population_log', 'Population log filename (str)', str),
+        sc.Parameter('final_population_log', 'Final population log (str)', str)
     ]
 
 
-class StrategySection(ConfigSection):
+class StrategySection(sc.ConfigSection):
     parameters = [
-        Parameter('n_generations', 'Number of generations (int)', int),
-        Parameter('population_size', 'Population size (int)', int),
-        Parameter('crossover_rate', 'Crossover rate (float)', float),
-        Parameter('muration_rate', 'Mutation rate (float)', float)
+        sc.Parameter('n_generations', 'Number of generations (int)', int),
+        sc.Parameter('population_size', 'Population size (int)', int),
+        sc.Parameter('crossover_rate', 'Crossover rate (float)', float),
+        sc.Parameter('muration_rate', 'Mutation rate (float)', float)
     ]
 
 
-class StandardScenarioParameter(AutoParameter):
+class StandardScenarioParameter(sc.AutoParameter):
     def parser(self, parameters, _globals):
         resolution = parameters['resolution']
         enum = ComponentManager.get_component_enum(_globals['components_filename'])
@@ -39,22 +39,23 @@ class StandardScenarioParameter(AutoParameter):
         return ' '.join(map(str, scenario))
 
 
-class EnvironmentSection(ConfigSection):
+class EnvironmentSection(sc.ConfigSection):
     parameters = [
-        Parameter('n_trash', 'Quantity of trash (int)', int),
-        Parameter('n_bin', 'Quantity of trash bin (int)', int),
-        Parameter('n_recharge', 'Quantity of recharge points (int)', int),
-        Parameter('resolution', 'Enviroment resolution (n x n blocks) (int)', int),
+        sc.ConstantParameter('n_agent', 1),
+        sc.Parameter('n_trash', 'Quantity of trash (int)', int),
+        sc.Parameter('n_bin', 'Quantity of trash bin (int)', int),
+        sc.Parameter('n_recharge', 'Quantity of recharge points (int)', int),
+        sc.Parameter('resolution', 'Enviroment resolution (n x n blocks) (int)', int),
         StandardScenarioParameter('standard_scenario')
     ]
 
 
-class VaccumConfigBuilder(ConfigBuilder):
+class VaccumConfigBuilder(sc.ConfigBuilder):
     sections = [
         LogSection('log'),
         EnvironmentSection('environment'),
         StrategySection('strategy'),
-        DefaultSimulationSection('simulation')
+        sc.DefaultSimulationSection('simulation')
     ]
 
     def __init__(self, components_filename):
