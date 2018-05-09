@@ -1,0 +1,24 @@
+{
+  "environment": {
+    "n_agent": 1,
+    "n_bin": 2,
+    "n_recharge": 2,
+    "n_trash": 12,
+    "resolution": 6,
+    "standard_scenario": "18 2 2 2 2 6 16 0 0 0 0 4 16 0 0 0 0 4 16 0 0 0 0 4 16 0 0 0 0 4 24 8 8 8 8 12"
+  },
+  "log": {
+    "final_population_log": "final_population.log",
+    "main_log": "main.log",
+    "population_log": "population.log"
+  },
+  "simulation": {
+    "mode": "CENTRALIZED"
+  },
+  "strategy": {
+    "crossover_rate": 0.85,
+    "muration_rate": 0.005,
+    "n_generations": 500,
+    "population_size": 100
+  }
+}
