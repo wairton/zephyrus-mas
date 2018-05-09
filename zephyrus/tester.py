@@ -82,22 +82,20 @@ class BaseTester(ABC, multiprocessing.Process):
 class Tester(BaseTester):
     messenger_class = TesterMessenger
 
-    def __init__(self, simulation_config, run_config, address_config, component_config=None):
+    def __init__(self, main_config, run_config, address_config, component_config=None):
         super().__init__()
-        self.configs = {}
-        self.configs['simulation'] = json.load(open(simulation_config))
-        self.configs['run'] = json.load(open(run_config))
+        self.config = json.load(open(main_config))
+        self.run_config = json.load(open(run_config))
         self.participants = Participants(address_config)
         if component_config is not None:
             self.components = ComponentManager(component_config).enum
         self.sockets = {}
 
     def initialize_participant(self, alias, cmd=None):
-        if '<MANUAL>' not in self.configs['run'][alias]:
+        if '<MANUAL>' not in self.run_config[alias]:
             # TODO add log
             if cmd is None:
-                # cmd = self.configs['run'][alias].split()
-                cmd = self.configs['run'][alias]
+                cmd = self.run_config[alias]
             # TODO Remove the SHAME!
             # os.system(' '.join(cmd) + ' &')
             # subprocess.Popen(cmd, shell=True, stderr=subprocess.PIPE).communicate()
@@ -113,7 +111,7 @@ class Tester(BaseTester):
 
     def run(self):
         logging.info('Tester: running.')
-        mode = Mode.from_string(self.configs['simulation']['mode'])
+        mode = Mode.from_string(self.config['simulation']['mode'])
         self.context = zmq.Context()
         self.socket_receive = self.context.socket(zmq.PULL)
         self.socket_receive.bind(self.participants.address('tester'))
