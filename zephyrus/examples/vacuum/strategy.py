@@ -2,22 +2,32 @@ import json
 import logging
 import math
 import random
+from itertools import islice
 
-from zephyrus.components import ComponentManager
+from zephyrus.components import ComponentManager, ComponentEnum
 from zephyrus.message import Message
 from zephyrus.strategy import Strategy
 from zephyrus.strategy.nsga2 import Nsga2, Solution
 from zephyrus.strategy.utils import manhattan_distance
 
 
+
+class Gene(Enum):
+    TRASH = 1
+    BIN = 2
+    RECHARGE = 3
+    AG = 4
+
+
 class VacuumSolution(Solution):
-    def __init__(self, solution_type):
+    def __init__(self, solution_type, resolution):
         super().__init__(solution_type)
         self.chromossome = []
         self.cloned = False
+        self.resolution = resolution
 
     def clone(self):
-        clone = VacuumSolution(self.type)
+        clone = VacuumSolution(self.type, self.resolution)
         clone.chromossome = self.chromossome[:]
         clone.objectives = self.objectives[:]
         clone.type = self.type
@@ -28,14 +38,16 @@ class VacuumSolution(Solution):
         clone.cloned = True
         return clone
 
-    def draw(self, destino):
-        resolution = int(math.sqrt(len(self.chromossome)))
+    def draw(self):
+        result = []
         pos = ['_', '*', 'u', '$', '@']
+        resolution = self.resolution
         for i in range(resolution):
             for j in range(resolution):
-                destino.write(pos[self.chromossome[i * resolution + j]] + ' ')
-            destino.write('\n')
-        destino.write('\n')
+                result.append(pos[self.chromossome[i * resolution + j]] + ' ')
+            result.append('\n')
+        result.append('\n')
+        return ''.join(result)
 
     def __str__(self):
         return repr(self.chromossome)
@@ -44,70 +56,70 @@ class VacuumSolution(Solution):
         decoded = []
         for gene in self.chromossome:
             value = 0
-            if gene == 1:
+            if gene == Gene.TRASH:
                 value = components.TRASH.value
-            elif gene == 2:
+            elif gene == Gene.BIN:
                 value = components.BIN.value
-            elif gene == 3:
+            elif gene == Gene.RECHARGE:
                 value = components.RECHARGE.value
-            elif gene == 4:
+            elif gene == Gene.AG:
                 value = components.AG.value
             else:
                 raise ZephyrusException("Decode error: unknown value {}".format(gene))
             decoded.append(value)
         return decoded
 
-    def evaluate(self, resolution): #TODO: o parâmetro resolução é realmente necessário?
-        pos = zip(self.chromossome, [(i,j) for i in range(resolution) for j in range(resolution)])
-        sujeiras = filter(lambda k:k[0] == 1, pos)
-        lixeiras = filter(lambda k:k[0] == 2, pos)
-        recargas = filter(lambda k:k[0] == 3, pos)
-        agents = filter(lambda k:k[0] == 4, pos)
-        dlixeira = 0
-        drecarga = 0
-        for n, pos in sujeiras:
-            aux = resolution ** 2 #valor maior que o máximo
-            #NOTE: poderiam ser feitas com min(map())
-            for n2, posl in lixeiras:
-                atual = manhattan_distance(pos, posl)
-                if atual < aux:
-                    aux = atual
-            dlixeira += aux
-            aux = resolution ** 2  # valor maior que o máximo
-            for n2, posl in recargas:
-                atual = manhattan_distance(pos, posl)
-                if atual < aux:
-                    aux = atual
-            drecarga += aux
-        self.objectives = (dlixeira, drecarga)
+    def evaluate(self):
+        resolution = self.resolution
+        gene_pos = zip(self.chromossome, [(i,j) for i in range(resolution) for j in range(resolution)])
+        trash_items = filter(lambda k:k[0] == Gene.TRASH, gene_pos)
+        bin_items = filter(lambda k:k[0] == Gene.BIN, gene_pos)
+        recharge_items = filter(lambda k:k[0] == Gene.RECHARGE, gene_pos)
+        bin_distance = 0
+        recharge_distance = 0
+        for gene, trash_pos in trash_items:
+            min_distance = resolution ** 2
+            #TODO: this could be done with some min(map()) magic
+            for gene2, bin_pos in bin_items:
+                distance = manhattan_distance(trash_pos, bin_pos)
+                if distance < min_distance:
+                    min_distance = distance
+            bin_distance += min_distance
+            #
+            min_distance = resolution ** 2  # valor maior que o máximo
+            for gene2, recharge_pos in recharge_items:
+                distance = manhattan_distance(trash_pos, recharge_pos)
+                if distance < min_distance:
+                    min_distance = distance
+            recharge_distance += min_distance
+        self.objectives = (bin_distance, recharge_distance)
 
-    def reproduction(self, outro, crossover_prob, mutation_prob, resolution, nsujeira, nlixeira, ncarga, nagente):
-        novoIndividuo = self.crossover(outro, crossover_prob, resolution, nsujeira, nlixeira, ncarga, nagente)
-        ocorreuMutacao = novoIndividuo.mutation(mutation_prob)
-        if ocorreuMutacao:
-            novoIndividuo.objectives = None
-            novoIndividuo.cloned = False
-        return novoIndividuo
+    def reproduction(self, other, crossover_prob, mutation_prob, n_trash, n_bin, n_recharge, n_ag):
+        new_individual = self.crossover(other, crossover_prob, n_trash, n_bin, n_recharge, n_ag)
+        has_mutate = new_individual.mutation(mutation_prob)
+        if has_mutate:
+            new_individual.objectives = None
+            new_individual.cloned = False
+        return new_individual
 
-    def crossover(self, outro, crossover_prob, resolution, nsujeira, nlixeira, ncarga, nagente):
+    def crossover(self, other, crossover_prob, n_trash, n_bin, n_recharge, n_ag):
         if random.random() < crossover_prob:
-            new_individual = VacuumSolution(SolutionType.MIN)
-            crossover_point = resolution ** 2 / 2
+            new_individual = VacuumSolution(SolutionType.MIN, self.resolution)
+            length = len(self.chromossome)
+            crossover_point = length // 2
             new_individual.chromossome.extend(self.chromossome[:crossover_point])
-            positions = {}
-            maximos = (resolution ** 2 - (nsujeira + nlixeira + ncarga + nagente), nsujeira, nlixeira, ncarga, nagente)
-            for i in range(5):
-                positions[i] = 0
+            totals = (length - (n_trash + n_bin + n_recharge + n_ag), n_trash, n_bin, n_recharge, n_ag)
+            positions = {i: 0 for i in range(5)}
             for gene in new_individual.chromossome:
                 positions[gene] += 1
-            for gene in outro.chromossome[crossover_point:]:
-                if positions[gene] < maximos[gene]:
+            for gene in islice(other.chromossome, crossover_point, None):
+                if positions[gene] < totals[gene]:
                     new_individual.chromossome.append(gene)
                     positions[gene] += 1
-            for gene in outro.chromossome[:crossover_point]:
-                if len(new_individual.chromossome) == resolution ** 2:
+            for gene in islice(other.chromossome, crossover_point):
+                if len(new_individual.chromossome) == length:
                     break
-                if positions[gene] < maximos[gene]:
+                if positions[gene] < totals[gene]:
                     new_individual.chromossome.append(gene)
                     positions[gene] += 1
             return new_individual
@@ -118,20 +130,20 @@ class VacuumSolution(Solution):
         for i in range(len(self.chromossome)):
             if random.random() < mutation_prob:
                 mutation_ocurred = True
-                outro = random.sample(range(len(self.chromossome)), 1)
-                #NOTE: e se outro == i?
-                self.chromossome[i], self.chromossome[outro] = self.chromossome[outro], self.chromossome[i]
+                other = random.sample(range(len(self.chromossome)), 1)
+                # TODO: what if other == i?
+                self.chromossome[i], self.chromossome[other] = self.chromossome[other], self.chromossome[i]
         return mutation_ocurred
 
 
 class VaccumCleanerNsga2(Nsga2):
     def __init__(self, npop, max_iterations, component_config):
         super().__init__(npop, max_iterations)
-        self.nagentes = 0
+        self.n_ag = 0
         self.resolution = 0
-        self.nsujeira = 0
-        self.nlixeira = 0
-        self.ncarga = 0
+        self.n_trash = 0
+        self.n_bin = 0
+        self.n_recharge = 0
         self._evaluator = None
 
         self.components = ComponentManager.get_component_enum(component_config)
@@ -158,15 +170,15 @@ class VaccumCleanerNsga2(Nsga2):
         for k in args.keys():
             valor = args[k]
             if k == 'agentes':
-                self.nagentes = valor
+                self.n_ag = valor
             elif k == 'resolucao':
                 self.resolution = valor
             elif k == 'sujeira':
-                self.nsujeira = valor
+                self.n_trash = valor
             elif k == 'lixeira':
-                self.nlixeira = valor
+                self.n_bin = valor
             elif k == 'carga':
-                self.ncarga = valor
+                self.n_recharge = valor
             elif k == 'crossover':
                 self.crossover_prob = valor
             elif k == 'mutacao':
@@ -174,16 +186,16 @@ class VaccumCleanerNsga2(Nsga2):
             else:
                 print 'opção "%s" inválida' % (k)
 
-    def generate_individual(self, resolution, nsujeira, nlixeira, ncarga, nagentes):
+    def generate_individual(self, resolution, n_trash, n_bin, n_recharge, n_ag):
         chromossome = []
-        chromossome.extend(1 for l in range(nsujeira))
-        chromossome.extend(2 for l in range(nlixeira))
-        chromossome.extend(3 for r in range(ncarga))
-        chromossome.extend(4 for r in range(nagentes))
+        chromossome.extend(1 for l in range(n_trash))
+        chromossome.extend(2 for l in range(n_bin))
+        chromossome.extend(3 for r in range(n_recharge))
+        chromossome.extend(4 for r in range(n_ag))
         nvazio = resolution ** 2 - len(chromossome)
         chromossome.extend(0 for i in range(nvazio))
         random.shuffle(chromossome)
-        individual = VacuumSolution(SolutionType.MIN)
+        individual = VacuumSolution(SolutionType.MIN, self.resolution)
         individual.chromossome = chromossome
         individual.objectives = self.evaluator(individual.decode(self.components))
         return individual
@@ -194,7 +206,7 @@ class VaccumCleanerNsga2(Nsga2):
     def generate_initial_population(self, log=True):
         population = []
         for _ in range(self.npop):
-            population.append(self.generate_individual(self.resolution, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
+            population.append(self.generate_individual(self.resolution, self.n_trash, self.n_bin, self.n_recharge, self.n_ag))
         if log:
             VaccumCleanerNsga2.draw(population, 'inicial.txt')
         return population
@@ -204,7 +216,7 @@ class VaccumCleanerNsga2(Nsga2):
         new_population = []
         for i in range(size - 1, -1, -1):
             #NOTE: refatore-me!!!!
-            new_population.append(selected[i].reproduction(selected[i - 1], self.crossover_prob, self.mutation_prob, self.resolution, self.nsujeira, self.nlixeira, self.ncarga, self.nagentes))
+            new_population.append(selected[i].reproduction(selected[i - 1], self.crossover_prob, self.mutation_prob, self.n_trash, self.n_bin, self.n_recharge, self.n_ag))
         for individual in new_population:
             if individual.objectives == None:
                 individual.objectives = self.evaluator(individual.decode(self.components))
