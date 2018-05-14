@@ -17,7 +17,7 @@ class StrategySection(sc.ConfigSection):
         sc.Parameter('n_generations', 'Number of generations (int)', int),
         sc.Parameter('population_size', 'Population size (int)', int),
         sc.Parameter('crossover_rate', 'Crossover rate (float)', float),
-        sc.Parameter('muration_rate', 'Mutation rate (float)', float)
+        sc.Parameter('mutation_rate', 'Mutation rate (float)', float)
     ]
 
 
