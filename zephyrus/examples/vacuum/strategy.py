@@ -1,3 +1,4 @@
+import enum
 import json
 import logging
 import math
@@ -5,14 +6,14 @@ import random
 from itertools import islice
 
 from zephyrus.components import ComponentManager, ComponentEnum
+from zephyrus.exceptions import ZephyrusException
 from zephyrus.message import Message
 from zephyrus.strategy import Strategy
 from zephyrus.strategy.nsga2 import Nsga2, Solution
-from zephyrus.strategy.utils import manhattan_distance
+from zephyrus.strategy.utils import manhattan_distance, SolutionType
 
 
-
-class Gene(Enum):
+class Gene(enum.Enum):
     TRASH = 1
     BIN = 2
     RECHARGE = 3
@@ -56,15 +57,15 @@ class VacuumSolution(Solution):
         decoded = []
         for gene in self.chromossome:
             value = 0
-            if gene == Gene.TRASH:
+            if gene == Gene.TRASH.value:
                 value = components.TRASH.value
-            elif gene == Gene.BIN:
+            elif gene == Gene.BIN.value:
                 value = components.BIN.value
-            elif gene == Gene.RECHARGE:
+            elif gene == Gene.RECHARGE.value:
                 value = components.RECHARGE.value
-            elif gene == Gene.AG:
+            elif gene == Gene.AG.value:
                 value = components.AG.value
-            else:
+            elif gene != 0:
                 raise ZephyrusException("Decode error: unknown value {}".format(gene))
             decoded.append(value)
         return decoded
@@ -72,9 +73,9 @@ class VacuumSolution(Solution):
     def evaluate(self):
         resolution = self.resolution
         gene_pos = zip(self.chromossome, [(i,j) for i in range(resolution) for j in range(resolution)])
-        trash_items = filter(lambda k:k[0] == Gene.TRASH, gene_pos)
-        bin_items = filter(lambda k:k[0] == Gene.BIN, gene_pos)
-        recharge_items = filter(lambda k:k[0] == Gene.RECHARGE, gene_pos)
+        trash_items = filter(lambda k:k[0] == Gene.TRASH.value, gene_pos)
+        bin_items = filter(lambda k:k[0] == Gene.BIN.value, gene_pos)
+        recharge_items = filter(lambda k:k[0] == Gene.RECHARGE.value, gene_pos)
         bin_distance = 0
         recharge_distance = 0
         for gene, trash_pos in trash_items:
@@ -94,16 +95,16 @@ class VacuumSolution(Solution):
             recharge_distance += min_distance
         self.objectives = (bin_distance, recharge_distance)
 
-    def reproduction(self, other, crossover_prob, mutation_prob, n_trash, n_bin, n_recharge, n_ag):
-        new_individual = self.crossover(other, crossover_prob, n_trash, n_bin, n_recharge, n_ag)
-        has_mutate = new_individual.mutation(mutation_prob)
+    def reproduction(self, other, crossover_rate, mutation_rate, n_trash, n_bin, n_recharge, n_ag):
+        new_individual = self.crossover(other, crossover_rate, n_trash, n_bin, n_recharge, n_ag)
+        has_mutate = new_individual.mutation(mutation_rate)
         if has_mutate:
             new_individual.objectives = None
             new_individual.cloned = False
         return new_individual
 
-    def crossover(self, other, crossover_prob, n_trash, n_bin, n_recharge, n_ag):
-        if random.random() < crossover_prob:
+    def crossover(self, other, crossover_rate, n_trash, n_bin, n_recharge, n_ag):
+        if random.random() < crossover_rate:
             new_individual = VacuumSolution(SolutionType.MIN, self.resolution)
             length = len(self.chromossome)
             crossover_point = length // 2
@@ -125,20 +126,20 @@ class VacuumSolution(Solution):
             return new_individual
         return self.clone()
 
-    def mutation(self, mutation_prob):
+    def mutation(self, mutation_rate):
         mutation_ocurred = False
         for i in range(len(self.chromossome)):
-            if random.random() < mutation_prob:
+            if random.random() < mutation_rate:
                 mutation_ocurred = True
-                other = random.sample(range(len(self.chromossome)), 1)
+                other = random.sample(range(len(self.chromossome)), 1)[0]
                 # TODO: what if other == i?
                 self.chromossome[i], self.chromossome[other] = self.chromossome[other], self.chromossome[i]
         return mutation_ocurred
 
 
 class VaccumCleanerNsga2(Nsga2):
-    def __init__(self, npop, max_iterations, component_config):
-        super().__init__(npop, max_iterations)
+    def __init__(self, component_config):
+        super().__init__(0, 0)
         self.n_ag = 0
         self.resolution = 0
         self.n_trash = 0
@@ -147,9 +148,8 @@ class VaccumCleanerNsga2(Nsga2):
         self._evaluator = None
 
         self.components = ComponentManager.get_component_enum(component_config)
-        configuracao = json.load(open('configuracao.js'))
-        self.mainlog = configuracao['mainlog']
-        self.poplog = configuracao['poplog']
+        # configuracao = json.load(open('configuracao.js'))
+        # self.mainlog = configuracao['mainlog']
 
     @property
     def evaluator(self):
@@ -160,31 +160,30 @@ class VaccumCleanerNsga2(Nsga2):
         self._evaluator = val
 
     @staticmethod
-    def draw(population, destino):
-        arquivo = open(destino, 'w')
-        for individual in population:
-                individual.draw(arquivo)
-        arquivo.close()
+    def save_population_to_file(population, filename):
+        with open(filename, 'w') as out:
+            for individual in population:
+                out.write(individual.draw())
 
-    def configurar(self, **args):
-        for k in args.keys():
-            valor = args[k]
-            if k == 'agentes':
-                self.n_ag = valor
-            elif k == 'resolucao':
-                self.resolution = valor
-            elif k == 'sujeira':
-                self.n_trash = valor
-            elif k == 'lixeira':
-                self.n_bin = valor
-            elif k == 'carga':
-                self.n_recharge = valor
-            elif k == 'crossover':
-                self.crossover_prob = valor
-            elif k == 'mutacao':
-                self.mutation = valor
-            else:
-                print 'opção "%s" inválida' % (k)
+    def configure(self, **kwargs):
+        valid_options = set([
+            'n_ag',
+            'resolution',
+            'n_trash',
+            'n_bin',
+            'n_recharge',
+            'crossover_rate',
+            'mutation_rate',
+            'population_size',
+            'max_iterations',
+            'population_log',
+            'main_log',
+        ])
+        for config, value in kwargs.items():
+            if config not in valid_options:
+                logging.warning('invalid config {}'.format('config'))
+                continue
+            setattr(self, config, value)
 
     def generate_individual(self, resolution, n_trash, n_bin, n_recharge, n_ag):
         chromossome = []
@@ -197,18 +196,16 @@ class VaccumCleanerNsga2(Nsga2):
         random.shuffle(chromossome)
         individual = VacuumSolution(SolutionType.MIN, self.resolution)
         individual.chromossome = chromossome
-        individual.objectives = self.evaluator(individual.decode(self.components))
+        # individual.objectives = self.evaluator(individual.decode(self.components))
+        individual.objectives = self.evaluator(individual)
         return individual
-
-    def salvar(self, destino):
-        destino = open(destino,'w')
 
     def generate_initial_population(self, log=True):
         population = []
-        for _ in range(self.npop):
+        for _ in range(self.population_size):
             population.append(self.generate_individual(self.resolution, self.n_trash, self.n_bin, self.n_recharge, self.n_ag))
         if log:
-            VaccumCleanerNsga2.draw(population, 'inicial.txt')
+            VaccumCleanerNsga2.save_population_to_file(population, 'inicial.txt')
         return population
 
     def generate_population(self, current_population, size):
@@ -216,10 +213,11 @@ class VaccumCleanerNsga2(Nsga2):
         new_population = []
         for i in range(size - 1, -1, -1):
             #NOTE: refatore-me!!!!
-            new_population.append(selected[i].reproduction(selected[i - 1], self.crossover_prob, self.mutation_prob, self.n_trash, self.n_bin, self.n_recharge, self.n_ag))
+            new_population.append(selected[i].reproduction(selected[i - 1], self.crossover_rate, self.mutation_rate, self.n_trash, self.n_bin, self.n_recharge, self.n_ag))
         for individual in new_population:
             if individual.objectives == None:
-                individual.objectives = self.evaluator(individual.decode(self.components))
+                # individual.objectives = self.evaluator(individual.decode(self.components))
+                individual.objectives = self.evaluator(individual)
         return new_population
 
     def binary_tournament(self, pop):
