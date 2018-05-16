@@ -37,7 +37,7 @@ setup(
     include_package_data=True,
     keywords='zephyrus',
     name='zephyrus',
-    packages=find_packages(include=['zephyrus']),
+    packages=find_packages(include=['zephyrus', 'zephyrus.*']),
     setup_requires=setup_requirements,
     test_suite='tests',
     tests_require=test_requirements,
