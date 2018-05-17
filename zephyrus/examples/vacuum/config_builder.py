@@ -36,7 +36,7 @@ class StandardScenarioParameter(sc.AutoParameter):
         scenario.append((enum.WALLS + enum.WALLW).value)
         scenario.extend(enum.WALLS.value for _ in range(resolution - 2))
         scenario.append((enum.WALLS + enum.WALLE).value)
-        return ' '.join(map(str, scenario))
+        return scenario
 
 
 class EnvironmentSection(sc.ConfigSection):
