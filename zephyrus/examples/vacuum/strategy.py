@@ -138,7 +138,7 @@ class VacuumSolution(Solution):
 
 
 class VaccumCleanerNsga2(Nsga2):
-    def __init__(self, component_config):
+    def __init__(self):
         super().__init__(0, 0)
         self.n_ag = 0
         self.resolution = 0
@@ -147,7 +147,6 @@ class VaccumCleanerNsga2(Nsga2):
         self.n_recharge = 0
         self._evaluator = None
 
-        self.components = ComponentManager.get_component_enum(component_config)
         # configuracao = json.load(open('configuracao.js'))
         # self.mainlog = configuracao['mainlog']
 
@@ -196,7 +195,6 @@ class VaccumCleanerNsga2(Nsga2):
         random.shuffle(chromossome)
         individual = VacuumSolution(SolutionType.MIN, self.resolution)
         individual.chromossome = chromossome
-        # individual.objectives = self.evaluator(individual.decode(self.components))
         individual.objectives = self.evaluator(individual)
         return individual
 
@@ -216,7 +214,6 @@ class VaccumCleanerNsga2(Nsga2):
             new_population.append(selected[i].reproduction(selected[i - 1], self.crossover_rate, self.mutation_rate, self.n_trash, self.n_bin, self.n_recharge, self.n_ag))
         for individual in new_population:
             if individual.objectives == None:
-                # individual.objectives = self.evaluator(individual.decode(self.components))
                 individual.objectives = self.evaluator(individual)
         return new_population
 
@@ -227,9 +224,41 @@ class VaccumCleanerNsga2(Nsga2):
 
 
 class VacuumStrategy(Strategy):
+    def __init__(self, main_config, address_config, component_config):
+        super().__init__(address_config):
+        with open(main_config) as config:
+            self.main_config = json.load(config)
+
+    def build_nsga2_config(self):
+        return {
+            'n_ag': self.main_config['environment']['n_agent'],
+            'resolution': self.main_config['environment']['resolution'],
+            'n_trash': self.main_config['environment']['n_trash'],
+            'n_bin': self.main_config['environment']['n_bin'],
+            'n_recharge': self.main_config['environment']['n_recharge'],
+            'crossover_rate': self.main_config['strategy']['crossover_rate'],
+            'mutation_rate': self.main_config['strategy']['mutation_rate'],
+            'population_size': self.main_config['strategy']['population_size'],
+            'max_iterations': self.main_config['strategy']['n_generations'],
+            'population_log': self.main_config['log']['population_log'],
+            'main_log': self.main_config['log']['main_log']
+        }
+
+    def evaluator_callback(self, individual):
+        #
+        decoded = individual.decode(self.components)
+        scenario = self.main_config['environment']['standard_scenario']
+        content = {
+            'id': None,
+            'data': [(ComponentSet(d) + ComponentSet(s)).value for (d,s) in zip(decoded, scenario)]
+        }
+        msg = self.messenger.build_evaluate_message(content=content)
+        self.socket_send.send_string(str(msg))
+        ans = Message.from_string(self.socket_receive.recv_string())
+        logging.debug('Received {}'.format(str(ans)))
+        return ans.content
+
     def configure(self, content):
-        self.niter = content['niter']
-        self.length = content['length']
         self.nevaluators = content.get('nevaluators', 1)
 
     def mainloop(self):
@@ -239,31 +268,17 @@ class VacuumStrategy(Strategy):
             self.mainloop_dist()
 
     def mainloop_single(self):
-        # TODO expecting configuration here?
-        best_solution = None
-        best_value = None
-        for i in range(self.niter):
-            logging.info("Strategy: progress {}/{}".format(i + 1, self.niter))
-            solution = [random.random() for _ in range(self.length)]
-            msg = self.messenger.build_evaluate_message(content=solution)
-            self.socket_send.send_string(str(msg))
-            ans = Message.from_string(self.socket_receive.recv_string())
-            logging.debug('Received {}'.format(str(ans)))
-            if ans.type == 'RESULT':
-                if best_value is None or best_value > ans.content:
-                    best_value = ans.content
-                    best_solution = solution
-            elif ans.type == 'STOP':
-                logging.info('Strategy: stopping.')
-                break
-        logging.debug('Strategy: best found {}'.format(best_value))
-        logging.debug('Strategy: best solution {}'.format(best_solution))
+        nsga2 = VaccumCleanerNsga2()
+        nsga2.evaluator = self.evaluator_callback
+        nsga2.configure(**self.build_nsga2_config())
+        nsga2.main_loop()
         self.socket_send.send_string(str(self.messenger.build_stop_message()))
         msg = self.messenger.build_result_message(content={
             'value': best_value,
             'solution': best_solution
         })
         logging.debug('Strategy: sending result {}'.format(str(msg)))
+        self.socket_send.send_string(str(msg))
         self.socket_send.send_string(str(msg))
 
     def mainloop_dist(self):
