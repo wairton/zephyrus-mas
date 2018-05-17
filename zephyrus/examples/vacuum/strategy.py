@@ -1,16 +1,17 @@
 import enum
 import json
 import logging
-import math
 import random
 from itertools import islice
 
-from zephyrus.components import ComponentManager, ComponentEnum
+import zmq
+
+from zephyrus.components import ComponentSet
 from zephyrus.exceptions import ZephyrusException
 from zephyrus.message import Message
 from zephyrus.strategy import Strategy
 from zephyrus.strategy.nsga2 import Nsga2, Solution
-from zephyrus.strategy.utils import manhattan_distance, SolutionType
+from zephyrus.strategy.utils import SolutionType
 
 
 class Gene(enum.Enum):
@@ -70,31 +71,6 @@ class VacuumSolution(Solution):
             decoded.append(value)
         return decoded
 
-    def evaluate(self):
-        resolution = self.resolution
-        gene_pos = zip(self.chromossome, [(i,j) for i in range(resolution) for j in range(resolution)])
-        trash_items = filter(lambda k:k[0] == Gene.TRASH.value, gene_pos)
-        bin_items = filter(lambda k:k[0] == Gene.BIN.value, gene_pos)
-        recharge_items = filter(lambda k:k[0] == Gene.RECHARGE.value, gene_pos)
-        bin_distance = 0
-        recharge_distance = 0
-        for gene, trash_pos in trash_items:
-            min_distance = resolution ** 2
-            #TODO: this could be done with some min(map()) magic
-            for gene2, bin_pos in bin_items:
-                distance = manhattan_distance(trash_pos, bin_pos)
-                if distance < min_distance:
-                    min_distance = distance
-            bin_distance += min_distance
-            #
-            min_distance = resolution ** 2  # valor maior que o máximo
-            for gene2, recharge_pos in recharge_items:
-                distance = manhattan_distance(trash_pos, recharge_pos)
-                if distance < min_distance:
-                    min_distance = distance
-            recharge_distance += min_distance
-        self.objectives = (bin_distance, recharge_distance)
-
     def reproduction(self, other, crossover_rate, mutation_rate, n_trash, n_bin, n_recharge, n_ag):
         new_individual = self.crossover(other, crossover_rate, n_trash, n_bin, n_recharge, n_ag)
         has_mutate = new_individual.mutation(mutation_rate)
@@ -146,9 +122,6 @@ class VaccumCleanerNsga2(Nsga2):
         self.n_bin = 0
         self.n_recharge = 0
         self._evaluator = None
-
-        # configuracao = json.load(open('configuracao.js'))
-        # self.mainlog = configuracao['mainlog']
 
     @property
     def evaluator(self):
@@ -210,10 +183,10 @@ class VaccumCleanerNsga2(Nsga2):
         selected = [self.binary_tournament(current_population) for _ in range(size)]
         new_population = []
         for i in range(size - 1, -1, -1):
-            #NOTE: refatore-me!!!!
+            # NOTE: refatore-me!!!!
             new_population.append(selected[i].reproduction(selected[i - 1], self.crossover_rate, self.mutation_rate, self.n_trash, self.n_bin, self.n_recharge, self.n_ag))
         for individual in new_population:
-            if individual.objectives == None:
+            if individual.objectives is None:
                 individual.objectives = self.evaluator(individual)
         return new_population
 
@@ -225,7 +198,7 @@ class VaccumCleanerNsga2(Nsga2):
 
 class VacuumStrategy(Strategy):
     def __init__(self, main_config, address_config, component_config):
-        super().__init__(address_config):
+        super().__init__(address_config)
         with open(main_config) as config:
             self.main_config = json.load(config)
 
@@ -250,7 +223,7 @@ class VacuumStrategy(Strategy):
         scenario = self.main_config['environment']['standard_scenario']
         content = {
             'id': None,
-            'data': [(ComponentSet(d) + ComponentSet(s)).value for (d,s) in zip(decoded, scenario)]
+            'data': [(ComponentSet(d) + ComponentSet(s)).value for (d, s) in zip(decoded, scenario)]
         }
         msg = self.messenger.build_evaluate_message(content=content)
         self.socket_send.send_string(str(msg))
@@ -274,8 +247,8 @@ class VacuumStrategy(Strategy):
         nsga2.main_loop()
         self.socket_send.send_string(str(self.messenger.build_stop_message()))
         msg = self.messenger.build_result_message(content={
-            'value': best_value,
-            'solution': best_solution
+            'value': 0,
+            'solution': 0
         })
         logging.debug('Strategy: sending result {}'.format(str(msg)))
         self.socket_send.send_string(str(msg))
@@ -294,7 +267,7 @@ class VacuumStrategy(Strategy):
         trecv = 0
         while trecv < self.niter:
             while navailable > 0 and tsent < self.niter:
-                logging.info("Strategy: progress {}/{}".format(i + 1, self.niter))
+                logging.info("Strategy: progress {}/{}".format(1, self.niter))
                 solution = [random.random() for _ in range(self.length)]
                 msg = self.messenger.build_evaluate_message(content=solution)
                 self.socket_send.send_string(str(msg))
