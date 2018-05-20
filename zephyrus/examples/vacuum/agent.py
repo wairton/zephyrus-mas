@@ -12,7 +12,7 @@ from zephyrus.message import Message, Messenger
 
 
 class AgentMessenger(Messenger):
-    basic_messages = ['clean', 'recharge', 'stop', 'move', 'deposit']
+    basic_messages = ['perceive', 'clean', 'recharge', 'stop', 'move', 'deposit']
 
 
 class Plan(enum.Enum):
@@ -58,11 +58,6 @@ class VacuumAgent(Agent):
 
         self.x, self.y = 0, 0
         self.px, self.py = 0, 0
-        self.perceived_data = None
-        # True if the agent should send a message, False in case it is waiting for a reply
-        self.send = True
-        # False to send "PERCEIVE" actions
-        self.is_acting = True
         self.energy = self.MAX_ENERGY
         self.deposit = 0
         self.plan = Plan.NONE
@@ -76,46 +71,26 @@ class VacuumAgent(Agent):
 
     def mainloop(self):
         self.reset_memory()
-        self.send = True
-        self.is_acting = False
         while True:
-            if self.send:
-                if self.is_acting == False:
-                    self.socket_send.send("%s %s perceive" % (self.id, 0))
-                    self.send = False
-                else:
-                    acao = self.perceive(self.perceived_data)
-                    msg = "%s %s " % (self.id, 0)
-                    #TODO: tratar o caso PARAR
-                    self.socket_send.send(msg + acao)
-                    self.send = False
+            self.socket_send.send_string(str(self.messenger.build_perceive_action()))
+            action = self.perceive(self.perceived_data)
+            # TODO: handle stop!
+            self.socket_send.send_string(str(action))
+            feedback = Message.from_string(self.socket_receive.recv_string())
+
+            if feedback.type == 'CONFIRM':
+                if action.type == 'MOVE':
+                    self.mover()
+                elif action.type == 'CLEAN':
+                    self.limpar()
+                elif action.type == 'RECHARGE':
+                    self.carregar()
+                elif action.type == 'DEPOSIT':
+                    self.depositar()
+            elif feedback.type == 'REJECT' and action.type == 'MOVE':
+                self.colidir()
             else:
-                if self.is_acting == False:
-                    msg = self.socket_receive.recv()
-                    self.send = True
-                    self.is_acting = True
-                    self.perceived_data = int(msg.split()[2])
-                else:
-                    msg = self.socket_receive.recv() #apenas um feedback (ack)
-                    retorno = msg.split()[-1]
-                    if retorno == 'moveu':
-                        self.mover()
-                    elif retorno == 'limpou':
-                        self.limpar()
-                    elif retorno == 'recarregou':
-                        self.carregar()
-                    elif retorno == 'depositou':
-                        self.depositar()
-                    elif retorno == 'colidiu':
-                        self.colidir()
-                    elif retorno == 'parou':
-                        break
-                    elif retorno == 'nop':
-                        self.nop()
-                    else:
-                        pass
-                    self.send = True
-                    self.is_acting = False
+                # TODO: log invalid message?
 
     def act(self, perceived: ComponentSet):
         self.memorize(perceived)
