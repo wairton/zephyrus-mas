@@ -70,27 +70,25 @@ class Nsga2(ABC):
             fronteNovo = []
             for individual in fronteAnterior:
                 for indice in individual.dominated_indices:
-                    q = population[indice] #tentativa de reduzir o acesso a índices de listas
+                    q = population[indice]  # to reduce access to list
                     q.n_dominated -= 1
                     if q.n_dominated == 0:
                         q.fitness = i + 2
                         fronteNovo.append(q)
             i += 1
             fronts.append(fronteNovo)
-        return fronts  #NOTE: retorna um fronte vazio também?
+        return fronts  # NOTE: retorna um fronte vazio também?
 
-    #TODO: modificar nomenclatura desse método.
-    def crowdingDistanceAssignment(self, pontos):
-        for i in pontos:
+    def crowding_distance_assignment(self, individuals):
+        for i in individuals:
             i.distance = 0.0
-        nobjectives = len(pontos[0].objectives)
-        l = len(pontos)
+        nobjectives = len(individuals[0].objectives)
         for m in range(nobjectives):
-            pontos = sorted(pontos, key=lambda ponto: ponto.objectives[m])
-            pontos[0].distance, pontos[-1].distance = INFINITY, INFINITY
+            individuals = sorted(individuals, key=lambda i: i.objectives[m])
+            individuals[0].distance, individuals[-1].distance = INFINITY, INFINITY
             i = 1
-            while (i < l-1):
-                pontos[i].distance += (pontos[i+1].objectives[m] - pontos[i-1].objectives[m])
+            while (i < len(individuals) - 1):
+                individuals[i].distance += (individuals[i + 1].objectives[m] - individuals[i - 1].objectives[m])
                 i += 1
 
     @abstractmethod
@@ -102,21 +100,18 @@ class Nsga2(ABC):
         pass
 
     def store_population(self, pid, population):
-        l = '*' * 40
+        separator_line = '*' * 40 + '\n'
         with open(self.population_log, 'a') as log:
             log.write("Interation {}\n".format(pid))
-            log.write("{}\n".format(l))
+            log.write(separator_line)
             for individual in population:
                 log.write(individual.draw())
                 for objective in individual.objectives:
                     log.write(str(objective) + ' ')
                 log.write('\n')
 
-    #TODO: mudar o nome para unir populações?
-    def gerarConjunto(self, pop1, pop2):
-        extra = filter(lambda p:p.cloned==False, pop2)
-        pop1.extend(extra)
-        return pop1
+    def merge_populations(self, pop1, pop2):
+        return pop1 + [p for p in pop2 if p.cloned is False]
 
     def main_loop(self):
         p = self.generate_initial_population()
@@ -125,19 +120,18 @@ class Nsga2(ABC):
         i = 0
         while i < self.max_iterations:
             log = open(self.main_log, "a")
-            log.write("\nGeração %s\n" % (i+1))
+            log.write("\nGeneration {}\n".format(i + 1))
             log.close()
             print('\r{} of {}'.format(i + 1, self.max_iterations), end='')
-            #r = list(set(p + q))
-            r = self.gerarConjunto(p, q)
-            frontes = self.fast_non_dominated_sort(r)
+            r = self.merge_populations(p, q)
+            fronts = self.fast_non_dominated_sort(r)
             p = []
-            for fronte in frontes:
-                self.crowdingDistanceAssignment(fronte)
-                p.extend(fronte)
+            for front in fronts:
+                self.crowding_distance_assignment(front)
+                p.extend(front)
                 if len(p) >= self.population_size:
                     break
-            p = sorted(p, key = lambda el: el.distance, reverse = True)
+            p = sorted(p, key=lambda el: el.distance, reverse=True)
             p = p[:self.population_size]
             q = self.generate_population(p, self.population_size)
             i += 1
