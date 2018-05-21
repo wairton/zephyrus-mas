@@ -52,8 +52,8 @@ class VacuumAgent(Agent):
         self.visited = set()
         self.wall_map = {}
         self.non_visited = set()
-        self.trash_bins = []
-        self.recharge_points = []
+        self.trash_bins = set()
+        self.recharge_points = set()
         self.trash_points = set()
         self.movements = []
 
@@ -169,10 +169,10 @@ class VacuumAgent(Agent):
                 self.non_visited.add((self.x, self.y - 1))
         if self.components.TRASH in perceived:
             self.trash_points.add((self.x, self.y))
-        if self.components.BIN in perceived and not ((self.x, self.y) in self.trash_bins):
-            self.trash_bins.append((self.x, self.y))
-        if self.components.RECHARGE in perceived and not ((self.x, self.y) in self.recharge_points):
-            self.recharge_points.append((self.x, self.y))
+        if self.components.BIN in perceived:
+            self.trash_bins.add((self.x, self.y))
+        if self.components.RECHARGE in perceived:
+            self.recharge_points.add((self.x, self.y))
 
     def choose_direction(self, walls: ComponentSet):
         has_places_to_explore = len(self.non_visited) > 0 or len(self.trash_points) > 0
@@ -221,7 +221,7 @@ class VacuumAgent(Agent):
         matrix = [[-1000 for i in range(sizey)] for i in range(sizex)]
         for x, y in self.visited:
             matrix[x - minx][y - miny] = 1000
-        for x,y in self.recharge_points:
+        for x, y in self.recharge_points:
             matrix[x - minx][y - miny] = -1
 
         path = self.shortest_path(matrix, (self.x, self.y), minx, maxx, miny, maxy)
@@ -248,7 +248,7 @@ class VacuumAgent(Agent):
         matrix = [[-1000 for i in range(sizey)] for i in range(sizex)]
         for x, y in self.visited:
             matrix[x - minx][y - miny] = 1000
-        for x,y in self.trash_bins:
+        for x, y in self.trash_bins:
             matrix[x - minx][y - miny] = -1
 
         path = self.shortest_path(matrix, (self.x, self.y), minx, maxx, miny, maxy)
