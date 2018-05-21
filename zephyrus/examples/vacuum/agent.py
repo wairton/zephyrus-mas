@@ -138,7 +138,7 @@ class VacuumAgent(Agent):
             else:
                 raise ZephyrusException("plano desconhecido")
         elif (self.energy / self.MAX_ENERGY) < self.RECHARGE_THRESHOLD:
-            return self.tracarPlanoRecarga(perceived)
+            return self.devise_recharge_plan(perceived)
         elif self.deposit == self.DEPOSIT_CAPACITY:
             return self.devise_deposit_plan(perceived)
         elif self.components.TRASH in perceived:
@@ -203,33 +203,34 @@ class VacuumAgent(Agent):
         # movement_recover
         return self.messenger.build_move_message(content=self.movement_recover)
 
-    def tracarPlanoRecarga(self, st: ComponentSet):
+    def devise_recharge_plan(self, perceived: ComponentSet):
         if len(self.recharge_points) == 0:
-            return self.choose_direction(self.get_perceived_wall_info(st))
-        self.plan = Plan.RECHARGE
-        self.nrecharge_points = int((self.MAX_ENERGY - self.energy)/10)
+            return self.choose_direction(self.get_perceived_wall_info(perceived))
 
-        if st[6] == True: #o agente já está em um ponto de recarga
+        self.plan = Plan.RECHARGE
+        self.nrecharge_points = int((self.MAX_ENERGY - self.energy) / 10)
+
+        if self.components.RECHARGE in perceived:
             self.movements = []
             self.nrecharge_points -= 1
-            return 'recarregar'
+            return self.messenger.build_recharge_message()
 
         minx, maxx, miny, maxy = self.calculate_dimensions()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
-        matriz = [[-1000 for i in range(sizey)] for i in range(sizex)]
-
+        matrix = [[-1000 for i in range(sizey)] for i in range(sizex)]
         for x, y in self.visited:
-            matriz[x-minx][y-miny] = 1000
-
+            matrix[x - minx][y - miny] = 1000
         for x,y in self.recharge_points:
-            matriz[x - minx][y - miny] = -1
-        caminho = self.shortest_path(matriz, (self.x, self.y),minx, maxx,miny, maxy)
-        self.movements = self.path_to_movements(caminho)
+            matrix[x - minx][y - miny] = -1
+
+        path = self.shortest_path(matrix, (self.x, self.y), minx, maxx, miny, maxy)
+        self.movements = self.path_to_movements(path)
         self.movement_recover = self.movements.pop(0)
+        # TODO: this -1 shouldn't be here
         self.energy -= 1
         self.px, self.py = self.DELTA_POS[self.movement_recover]
-        return "mover %s" % self.movement_recover
+        return self.messenger.build_move_message(content=self.movement_recover)
 
     def devise_deposit_plan(self, perceived: ComponentSet):
         if len(self.trash_bins) == 0:
