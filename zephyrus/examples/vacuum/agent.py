@@ -77,7 +77,6 @@ class VacuumAgent(Agent):
             # TODO: handle stop!
             self.socket_send.send_string(str(action))
             feedback = Message.from_string(self.socket_receive.recv_string())
-
             if feedback.type == 'CONFIRM':
                 if action.type == 'MOVE':
                     self.mover()
@@ -90,6 +89,7 @@ class VacuumAgent(Agent):
             elif feedback.type == 'REJECT' and action.type == 'MOVE':
                 self.colidir()
             else:
+                pass
                 # TODO: log invalid message?
 
     def act(self, perceived: ComponentSet):
@@ -145,7 +145,7 @@ class VacuumAgent(Agent):
             self.energy -= 3
             return self.messenger.build_clean_message()
         else:
-            return self.escolherDirecao(self.get_perceived_wall_info(perceived))
+            return self.choose_direction(self.get_perceived_wall_info(perceived))
 
     def get_perceived_wall_info(self, perceived: ComponentSet) -> ComponentSet:
         return self.WALLS & perceived
@@ -173,47 +173,38 @@ class VacuumAgent(Agent):
         if self.components.RECHARGE in perceived and not ((self.x, self.y) in self.recharge_points):
             self.recharge_points.append((self.x, self.y))
 
-    #TODO: a checagem de colisão no ambiente NÃO funciona para colisão com paredes
-    def escolherDirecao(self, paredes: ComponentSet):
-        available_directions = []
-        for i, parede in enumerate(paredes):
-            if not parede:
-                available_directions.append(i)
-
-        if len(available_directions) == 0:
-            return 'parar'
-
-        if len(self.non_visited) == 0 and len(self.trash_points) == 0:
-            return 'parar'
-
-        nvisitados = []
-        for direcao in direcoes:
-            if direcao == 0:
-                if ((self.x - 1, self.y) not in self.visited):
-                    nvisitados.append((0, (-1, 0)))
-            elif direcao == 1:
-                if ((self.x, self.y+1) not in self.visited):
-                    nvisitados.append((1, (0, 1)))
-            elif direcao == 2:
-                if ((self.x+1, self.y) not in self.visited):
-                    nvisitados.append((2, (1, 0)))
-            else:
-                if ((self.x, self.y-1) not in self.visited):
-                    nvisitados.append((3, (0, -1)))
-        if len(nvisitados) == 0:
+    def choose_direction(self, walls: ComponentSet):
+        has_places_to_explore = len(self.non_visited) > 0 or len(self.trash_points) > 0
+        if walls == self.WALLS or not has_places_to_explore:
+            return self.messenger.build_stop_message()
+        x, y = self.x, self.y
+        non_visited = []
+        if self.components.WALLN not in walls and (x - 1, y) not in self.visited:
+            non_visited.append((Movement.UP, (-1, 0)))
+        elif self.components.WALLE not in walls and (x, y + 1) not in self.visited:
+            non_visited.append((Movement.RIGHT, (0, 1)))
+        elif self.components.WALLS not in walls and (x + 1, y) not in self.visited:
+            non_visited.append((Movement.DOWN, (1, 0)))
+        elif self.components.WALLW not in walls and (x, y - 1) not in self.visited:
+            non_visited.append((Movement.LEFT, (0, -1)))
+        if len(non_visited) == 0:
             if len(self.non_visited) == 0:
                 return self.tracarPlanoSujeira()
             else:
                 return self.tracarPlanoExploracao()
-        chosen = choice(nvisitados)
+        chosen_movement, chosen_delta = choice(non_visited)
+        # TODO I don't think thats the right place to decrease energy
+        # maybe we should move this to after the action's confirmation
         self.energy -= 1
-        self.px, self.py = chosen[1]
-        self.movement_recover = chosen[0]
-        return 'mover %s' % self.movement_recover
+        self.px, self.py = chosen_delta
+        self.movement_recover = chosen_movement
+        # TODO: thanks to the mainloop refactor, we can now get rid of
+        # movement_recover
+        return self.messenger.build_move_message(content=self.movement_recover)
 
-    def tracarPlanoRecarga(self,st):
+    def tracarPlanoRecarga(self, st: ComponentSet):
         if len(self.recharge_points) == 0:
-            return self.escolherDirecao(st[:4])
+            return self.choose_direction(self.get_perceived_wall_info(st))
         self.plan = Plan.RECHARGE
         self.nrecharge_points = int((self.MAX_ENERGY - self.energy)/10)
 
@@ -239,9 +230,9 @@ class VacuumAgent(Agent):
         self.px, self.py = self.DELTA_POS[self.movement_recover]
         return "mover %s" % self.movement_recover
 
-    def tracarPlanoDeposito(self,st):
+    def tracarPlanoDeposito(self, st: ComponentSet):
         if len(self.trash_bins) == 0:
-            return self.escolherDirecao(st[:4])
+            return self.choose_direction(self.get_perceived_wall_info(st))
         self.plan = Plan.DEPOSIT
 
         if st[5] == True: #o agente já está em um ponto de recarga
@@ -364,7 +355,7 @@ class VacuumAgent(Agent):
         logging.error(self.info())
         raise ZephyrusException("Unable to find path")
 
-    #Método auxiliar que realiza a conversão de estados(paredes) para direções
+    #Método auxiliar que realiza a conversão de estados(walls) para direções
     def _wall_components_to_directions(self, position, st: ComponentSet):
         directions = []
         x, y = position
