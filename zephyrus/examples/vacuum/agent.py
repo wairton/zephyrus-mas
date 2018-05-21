@@ -3,6 +3,7 @@ import logging
 import sys
 import time
 from collections import deque
+from itertools import islice
 from random import choice
 
 from zephyrus.agent import Agent
@@ -139,13 +140,13 @@ class VacuumAgent(Agent):
         elif (self.energy / self.MAX_ENERGY) < self.RECHARGE_THRESHOLD:
             return self.tracarPlanoRecarga(perceived)
         elif self.deposit == self.DEPOSIT_CAPACITY:
-            return self.tracarPlanoDeposito(perceived)
+            return self.devise_deposit_plan(perceived)
         elif self.components.TRASH in perceived:
             # consumes energy regardless
             self.energy -= 3
             return self.messenger.build_clean_message()
-        else:
-            return self.choose_direction(self.get_perceived_wall_info(perceived))
+        return self.choose_direction(self.get_perceived_wall_info(perceived))
+
 
     def get_perceived_wall_info(self, perceived: ComponentSet) -> ComponentSet:
         return self.WALLS & perceived
@@ -213,7 +214,7 @@ class VacuumAgent(Agent):
             self.nrecharge_points -= 1
             return 'recarregar'
 
-        minx, maxx, miny, maxy = self.calcularDimensoes()
+        minx, maxx, miny, maxy = self.calculate_dimensions()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
         matriz = [[-1000 for i in range(sizey)] for i in range(sizex)]
@@ -224,43 +225,43 @@ class VacuumAgent(Agent):
         for x,y in self.recharge_points:
             matriz[x - minx][y - miny] = -1
         caminho = self.shortest_path(matriz, (self.x, self.y),minx, maxx,miny, maxy)
-        self.movements = self.caminhoParaMovimentos(caminho)
+        self.movements = self.path_to_movements(caminho)
         self.movement_recover = self.movements.pop(0)
         self.energy -= 1
         self.px, self.py = self.DELTA_POS[self.movement_recover]
         return "mover %s" % self.movement_recover
 
-    def tracarPlanoDeposito(self, st: ComponentSet):
+    def devise_deposit_plan(self, perceived: ComponentSet):
         if len(self.trash_bins) == 0:
-            return self.choose_direction(self.get_perceived_wall_info(st))
-        self.plan = Plan.DEPOSIT
+            return self.choose_direction(self.get_perceived_wall_info(perceived))
 
-        if st[5] == True: #o agente já está em um ponto de recarga
+        if self.components.DEPOSIT in perceived:
             self.movements = []
             self.plan = None
-            return 'depositar'
+            return self.messenger.build_deposit_message()
 
-        minx, maxx, miny, maxy = self.calcularDimensoes()
+        self.plan = Plan.DEPOSIT
+        minx, maxx, miny, maxy = self.calculate_dimensions()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
-        matriz = [[-1000 for i in range(sizey)] for i in range(sizex)]
-
+        matrix = [[-1000 for i in range(sizey)] for i in range(sizex)]
         for x, y in self.visited:
-            matriz[x-minx][y-miny] = 1000
-
+            matrix[x - minx][y - miny] = 1000
         for x,y in self.trash_bins:
-            matriz[x - minx][y - miny] = -1
-        caminho = self.shortest_path(matriz, (self.x, self.y),minx, maxx, miny, maxy)
-        self.movements = self.caminhoParaMovimentos(caminho)
+            matrix[x - minx][y - miny] = -1
+
+        path = self.shortest_path(matrix, (self.x, self.y), minx, maxx, miny, maxy)
+        self.movements = self.path_to_movements(path)
         self.movement_recover = self.movements.pop(0)
+        # energy -1 shouldn't be here
         self.energy -= 1
         self.px, self.py = self.DELTA_POS[self.movement_recover]
-        return "mover %s" % self.movement_recover
+        return self.messenger.build_move_message(content=self.movement_recover)
 
     def tracarPlanoSujeira(self):
         self.plan = Plan.CLEAN
 
-        minx, maxx, miny, maxy = self.calcularDimensoes()
+        minx, maxx, miny, maxy = self.calculate_dimensions()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
         matriz = [[-1000 for i in range(sizey)] for i in range(sizex)]
@@ -271,7 +272,7 @@ class VacuumAgent(Agent):
         for x,y in self.trash_points:
             matriz[x - minx][y - miny] = -1
         caminho = self.shortest_path(matriz, (self.x, self.y),minx, maxx,miny, maxy)
-        self.movements = self.caminhoParaMovimentos(caminho)
+        self.movements = self.path_to_movements(caminho)
         self.movement_recover = self.movements.pop(0)
         self.energy -= 1
         self.px, self.py = self.DELTA_POS[self.movement_recover]
@@ -279,33 +280,33 @@ class VacuumAgent(Agent):
 
     def tracarPlanoExploracao(self):
         self.plan = Plan.EXPLORE
-        minx, maxx, miny, maxy = self.calcularDimensoes()
+        minx, maxx, miny, maxy = self.calculate_dimensions()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
         matriz = [[-1 for i in range(sizey)] for i in range(sizex)]
 
         for x, y in self.visited:
             matriz[x-minx][y-miny] = 1000
-        caminho = self.shortest_path(matriz, (self.x, self.y),minx, maxx,miny, maxy)
-        self.movements = self.caminhoParaMovimentos(caminho)
+        caminho = self.shortest_path(matriz, (self.x, self.y), minx, maxx, miny, maxy)
+        self.movements = self.path_to_movements(caminho)
         self.energy -= 1
         self.movement_recover = self.movements.pop(0)
         self.px, self.py = self.DELTA_POS[self.movement_recover]
         return "mover %s" % self.movement_recover
 
-    def calcularDimensoes(self):
-        visitados = self.visited
+    def calculate_dimensions(self):
+        # TODO this code seems inneficient...
+        visited = self.visited
         if len(self.non_visited) != 0:
-            maxx = max(max(visitados)[0], max(self.non_visited)[0])
-            minx = min(min(visitados)[0], min(self.non_visited)[0])
-            maxy = max(max(visitados, key=lambda k:k[1])[1], max(self.non_visited, key=lambda k:k[1])[1])
-            miny = min(min(visitados, key=lambda k:k[1])[1], min(self.non_visited, key=lambda k:k[1])[1])
+            maxx = max(max(visited)[0], max(self.non_visited)[0])
+            minx = min(min(visited)[0], min(self.non_visited)[0])
+            maxy = max(max(visited, key=lambda k:k[1])[1], max(self.non_visited, key=lambda k:k[1])[1])
+            miny = min(min(visited, key=lambda k:k[1])[1], min(self.non_visited, key=lambda k:k[1])[1])
         else:
-            maxx = max(visitados)[0]
-            minx = min(visitados)[0]
-            maxy = max(visitados, key=lambda k:k[1])[1]
-            miny = min(visitados, key=lambda k:k[1])[1]
-
+            maxx = max(visited)[0]
+            minx = min(visited)[0]
+            maxy = max(visited, key=lambda k:k[1])[1]
+            miny = min(visited, key=lambda k:k[1])[1]
         return minx, maxx, miny, maxy
 
     def shortest_path(self, matriz, atual, minx, maxx, miny, maxy):
@@ -369,23 +370,22 @@ class VacuumAgent(Agent):
             ret.append((x, y - 1))
         return directions
 
-    def caminhoParaMovimentos (self, caminho):
-        movementos = []
-        orix, oriy = caminho[0]
-        for i in range(1,len(caminho)):
-            desx, desy = caminho[i]
+    def path_to_movements(self, path):
+        movements = []
+        orix, oriy = path[0]
+        for desx, desy in islice(path, 1, None):
             if orix != desx:
                 if orix > desx:
-                    movementos.append(0)
+                    movements.append(Movement.UP)
                 else:
-                    movementos.append(2)
+                    movements.append(Movement.DOWN)
             else:
                 if oriy > desy:
-                    movementos.append(3)
+                    movements.append(Movement.LEFT)
                 else:
-                    movementos.append(1)
+                    movements.append(Movement.RIGHT)
             orix, oriy = desx, desy
-        return movementos
+        return movements
 
     def limpar(self):
         #O agente executa a ação de limpar em sua posição atual.
