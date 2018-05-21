@@ -224,7 +224,7 @@ class VacuumAgent(Agent):
         for x, y in self.recharge_points:
             matrix[x - minx][y - miny] = -1
 
-        path = self.shortest_path(matrix, (self.x, self.y), minx, maxx, miny, maxy)
+        path = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
         self.movements = self.path_to_movements(path)
         self.movement_recover = self.movements.pop(0)
         # TODO: this -1 shouldn't be here
@@ -251,7 +251,7 @@ class VacuumAgent(Agent):
         for x, y in self.trash_bins:
             matrix[x - minx][y - miny] = -1
 
-        path = self.shortest_path(matrix, (self.x, self.y), minx, maxx, miny, maxy)
+        path = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
         self.movements = self.path_to_movements(path)
         self.movement_recover = self.movements.pop(0)
         # energy -1 shouldn't be here
@@ -265,14 +265,14 @@ class VacuumAgent(Agent):
         minx, maxx, miny, maxy = self.calculate_dimensions()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
-        matriz = [[-1000 for i in range(sizey)] for i in range(sizex)]
+        matrix = [[-1000 for i in range(sizey)] for i in range(sizex)]
 
         for x, y in self.visited:
-            matriz[x-minx][y-miny] = 1000
+            matrix[x-minx][y-miny] = 1000
 
         for x,y in self.trash_points:
-            matriz[x - minx][y - miny] = -1
-        caminho = self.shortest_path(matriz, (self.x, self.y),minx, maxx,miny, maxy)
+            matrix[x - minx][y - miny] = -1
+        caminho = self.shortest_path(matrix, self.x, self.y,minx, maxx,miny, maxy)
         self.movements = self.path_to_movements(caminho)
         self.movement_recover = self.movements.pop(0)
         self.energy -= 1
@@ -284,11 +284,11 @@ class VacuumAgent(Agent):
         minx, maxx, miny, maxy = self.calculate_dimensions()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
-        matriz = [[-1 for i in range(sizey)] for i in range(sizex)]
+        matrix = [[-1 for i in range(sizey)] for i in range(sizex)]
 
         for x, y in self.visited:
-            matriz[x-minx][y-miny] = 1000
-        caminho = self.shortest_path(matriz, (self.x, self.y), minx, maxx, miny, maxy)
+            matrix[x-minx][y-miny] = 1000
+        caminho = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
         self.movements = self.path_to_movements(caminho)
         self.energy -= 1
         self.movement_recover = self.movements.pop(0)
@@ -310,65 +310,61 @@ class VacuumAgent(Agent):
             miny = min(visited, key=lambda k:k[1])[1]
         return minx, maxx, miny, maxy
 
-    def shortest_path(self, matriz, atual, minx, maxx, miny, maxy):
+    def shortest_path(self, matrix, px, py, minx, maxx, miny, maxy):
         queue = deque()
-        caminho = []
-        queue.append(atual)
-        px, py = atual
-        matriz[px-minx][py-miny] =  0
-        peso = 0
+        path = []
+        queue.append((px, py))
+        matrix[px - minx][py - miny] =  0
         while len(queue) > 0:
             px, py = queue.popleft()
-            weight = matriz[px - minx][py - miny]
+            weight = matrix[px - minx][py - miny]
             assert weight != -1
-            direcoes = self._wall_components_to_directions((px, py), self.wall_map[(px, py)])
-            for direcao in direcoes:
-                opx, opy = direcao
-                if matriz[opx - minx][opy - miny] > weight + 1:   #encontrou um caminho melhor (ou o primeiro caminho) até aquela posição.
-                    matriz[opx - minx][opy - miny] = weight + 1
-                    queue.append(direcao)
-                elif matriz[opx - minx][opy - miny] == -1: #encontrou uma posição que ainda não foi visitada.
-                    caminho.append((opx, opy))
+            directions = self._wall_components_to_directions((px, py), self.wall_map[(px, py)])
+            for opx, opy in directions:
+                if matrix[opx - minx][opy - miny] > weight + 1:
+                    matrix[opx - minx][opy - miny] = weight + 1
+                    queue.append((opx, opy))
+                elif matrix[opx - minx][opy - miny] == -1:
+                    path.append((opx, opy))
                     while weight >= 0:
-                        #Sul
-                        if ((opx - minx + 1 <= maxx - minx) and (matriz[opx - minx + 1][opy - miny] == weight)):
-                            caminho.append((opx + 1, opy))
+                        # Down
+                        if (opx - minx + 1 <= maxx - minx) and (matrix[opx - minx + 1][opy - miny] == weight):
+                            path.append((opx + 1, opy))
                             opx += 1
                             weight -= 1
                             continue
-                        #Oeste
-                        if ((opy - miny - 1 >= 0) and (matriz[opx - minx][opy - 1 - miny] == weight)):
-                            caminho.append((opx, opy - 1))
+                        # West
+                        if (opy - miny - 1 >= 0) and (matrix[opx - minx][opy - 1 - miny] == weight):
+                            path.append((opx, opy - 1))
                             opy -= 1
                             weight -= 1
                             continue
-                        #Norte
-                        if (opx - minx - 1 >= 0) and (matriz[opx - minx - 1][opy - miny] == weight):
-                            caminho.append((opx - 1, opy))
+                        # North
+                        if (opx - minx - 1 >= 0) and (matrix[opx - minx - 1][opy - miny] == weight):
+                            path.append((opx - 1, opy))
                             weight -= 1
                             opx -= 1
                             continue
-                        if (opy - miny + 1 <= maxy - miny) and (matriz[opx - minx][opy + 1 - miny] == weight):
-                            caminho.append((opx, opy + 1))
+                        if (opy - miny + 1 <= maxy - miny) and (matrix[opx - minx][opy + 1 - miny] == weight):
+                            path.append((opx, opy + 1))
                             weight -= 1
                             opy += 1
                             continue
-                    return caminho[::-1]
+                    return path[::-1]
         logging.error(self.info())
         raise ZephyrusException("Unable to find path")
 
-    #Método auxiliar que realiza a conversão de estados(walls) para direções
-    def _wall_components_to_directions(self, position, st: ComponentSet):
+    def _wall_components_to_directions(self, position, walls: ComponentSet):
         directions = []
         x, y = position
-        if self.components.WALLN not in st:
-            ret.append((x - 1, y))
-        if self.components.WALLE not in st:
-            ret.append((x, y + 1))
-        if self.components.WALLS not in st:
-            ret.append((x + 1, y))
-        if self.components.WALLW not in st:
-            ret.append((x, y - 1))
+        if self.components.WALLN not in walls:
+            directions.append((x - 1, y))
+        if self.components.WALLE not in walls:
+            directions.append((x, y + 1))
+        if self.components.WALLS not in walls:
+            directions.append((x + 1, y))
+        if self.components.WALLW not in walls:
+            directions.append((x, y - 1))
         return directions
 
     def path_to_movements(self, path):
