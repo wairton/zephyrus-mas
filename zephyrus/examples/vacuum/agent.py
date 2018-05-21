@@ -105,13 +105,13 @@ class VacuumAgent(Agent):
                 self.px, self.py = self.DELTA_POS[self.movement_recover]
                 if len(self.movements) == 0:
                     self.plan = Plan.NONE
-                return self.messenger.build_move_message(self.movement_recover)
+                return self.messenger.build_move_message(content=self.movement_recover)
             elif self.plan == Plan.DEPOSIT:
                 if len(self.movements) > 0:
                     self.movement_recover = self.movements.pop(0)
                     self.px, self.py = self.DELTA_POS[self.movement_recover]
                     self.energy -= 1
-                    return self.messenger.build_move_message(self.movement_recover)
+                    return self.messenger.build_move_message(content=self.movement_recover)
                 else:
                     self.plan = Plan.NONE
                     return self.messenger.build_deposit_message()
@@ -120,7 +120,7 @@ class VacuumAgent(Agent):
                     self.movement_recover = self.movements.pop(0)
                     self.px, self.py = self.DELTA_POS[self.movement_recover]
                     self.energy -= 1
-                    return self.messenger.build_move_message(self.movement_recover)
+                    return self.messenger.build_move_message(content=self.movement_recover)
                 else:
                     self.nrecharge_points -= 1
                     if self.nrecharge_points == 0:
@@ -131,12 +131,12 @@ class VacuumAgent(Agent):
                     self.movement_recover = self.movements.pop(0)
                     self.px, self.py = self.DELTA_POS[self.movement_recover]
                     self.energy -= 1
-                    return self.messenger.build_move_message(self.movement_recover)
+                    return self.messenger.build_move_message(content=self.movement_recover)
                 else:
                     self.plan = Plan.NONE
                     return self.messenger.build_clean_message()
             else:
-                raise ZephyrusException("plano desconhecido")
+                raise ZephyrusException("Unknown Plan")
         elif (self.energy / self.MAX_ENERGY) < self.RECHARGE_THRESHOLD:
             return self.devise_recharge_plan(perceived)
         elif self.deposit == self.DEPOSIT_CAPACITY:
