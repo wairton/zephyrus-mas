@@ -77,8 +77,11 @@ class VacuumAgent(Agent):
     def mainloop(self):
         self.reset_memory()
         while True:
-            self.socket_send.send_string(str(self.messenger.build_perceive_action()))
-            action = self.perceive(self.perceived_data)
+            self.socket_send.send_string(str(self.messenger.build_perceive_message()))
+            msg = Message.from_string(self.socket_receive.recv_string())
+            if msg.type == 'STOP':
+                break
+            action = self.perceive(msg.content)
             # TODO: handle stop!
             self.socket_send.send_string(str(action))
             feedback = Message.from_string(self.socket_receive.recv_string())
@@ -411,5 +414,8 @@ class VacuumAgent(Agent):
 
 
 if __name__ == '__main__':
-    agent = VacuumAgent(1, *sys.argv[1:])
-    agent.start()
+    import sys
+    import os
+    basedir = os.path.dirname(__file__)
+    args = [s if s.startswith("/") else os.path.join(basedir, s) for s in sys.argv[1:]]
+    VacuumAgent(1, *args).start()
