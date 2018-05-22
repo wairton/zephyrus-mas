@@ -1,7 +1,6 @@
 import enum
 import logging
 import sys
-import time
 from collections import deque
 from itertools import islice
 from random import choice
@@ -39,6 +38,7 @@ class VacuumAgent(Agent):
         self.id = ag_id
         # communication
         # internal state
+        c = self.components
         self.WALLS = c.WALLN + c.WALLE + c.WALLS + c.WALLE
         self.DELTA_POS = ((-1, 0), (0, 1), (1, 0), (0, -1))
         self.MAX_ENERGY = 80.0
@@ -256,7 +256,7 @@ class VacuumAgent(Agent):
         sizey = maxy - miny + 1
         matrix = [[-1000 for i in range(sizey)] for i in range(sizex)]
         for x, y in self.visited:
-            matrix[x-minx][y-miny] = 1000
+            matrix[x - minx][y - miny] = 1000
         for x, y in self.trash_points:
             matrix[x - minx][y - miny] = -1
 
@@ -273,7 +273,7 @@ class VacuumAgent(Agent):
         sizey = maxy - miny + 1
         matrix = [[-1 for i in range(sizey)] for i in range(sizex)]
         for x, y in self.visited:
-            matrix[x-minx][y-miny] = 1000
+            matrix[x - minx][y - miny] = 1000
 
         path = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
         self.movements = self.path_to_movements(path)
@@ -287,20 +287,20 @@ class VacuumAgent(Agent):
         if len(self.non_visited) != 0:
             maxx = max(max(visited)[0], max(self.non_visited)[0])
             minx = min(min(visited)[0], min(self.non_visited)[0])
-            maxy = max(max(visited, key=lambda k:k[1])[1], max(self.non_visited, key=lambda k:k[1])[1])
-            miny = min(min(visited, key=lambda k:k[1])[1], min(self.non_visited, key=lambda k:k[1])[1])
+            maxy = max(max(visited, key=lambda k: k[1])[1], max(self.non_visited, key=lambda k: k[1])[1])
+            miny = min(min(visited, key=lambda k: k[1])[1], min(self.non_visited, key=lambda k: k[1])[1])
         else:
             maxx = max(visited)[0]
             minx = min(visited)[0]
-            maxy = max(visited, key=lambda k:k[1])[1]
-            miny = min(visited, key=lambda k:k[1])[1]
+            maxy = max(visited, key=lambda k: k[1])[1]
+            miny = min(visited, key=lambda k: k[1])[1]
         return minx, maxx, miny, maxy
 
     def shortest_path(self, matrix, px, py, minx, maxx, miny, maxy):
         queue = deque()
         path = []
         queue.append((px, py))
-        matrix[px - minx][py - miny] =  0
+        matrix[px - minx][py - miny] = 0
         while len(queue) > 0:
             px, py = queue.popleft()
             weight = matrix[px - minx][py - miny]
@@ -315,19 +315,19 @@ class VacuumAgent(Agent):
                 elif matrix[tx][ty] == -1:
                     path.append((opx, opy))
                     while weight >= 0:
-                        if (tx + 1 <= maxx - minx) and matrix[tx + 1][ty] == weight: # Down
+                        if (tx + 1 <= maxx - minx) and matrix[tx + 1][ty] == weight:  # Down
                             path.append((opx + 1, opy))
                             opx += 1
                             tx += 1
-                        elif ty >= 1 and matrix[tx][ty - 1] == weight: # Left
+                        elif ty >= 1 and matrix[tx][ty - 1] == weight:  # Left
                             path.append((opx, opy - 1))
                             opy -= 1
                             ty -= 1
-                        elif tx >= 1 and matrix[tx - 1][ty] == weight: # Up
+                        elif tx >= 1 and matrix[tx - 1][ty] == weight:  # Up
                             path.append((opx - 1, opy))
                             opx -= 1
                             tx -= 1
-                        elif (ty + 1 <= maxy - miny) and matrix[tx][ty + 1] == weight: # Right
+                        elif (ty + 1 <= maxy - miny) and matrix[tx][ty + 1] == weight:  # Right
                             path.append((opx, opy + 1))
                             opy += 1
                             ty += 1
@@ -385,7 +385,7 @@ class VacuumAgent(Agent):
 
     def handle_colision(self):
         self.energy -= 1
-        if self.plan != None:
+        if self.plan is not None:
             self.movements.insert(0, self.movement_recover)
 
     def handle_clean_failure(self):
