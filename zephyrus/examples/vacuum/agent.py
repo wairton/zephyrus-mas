@@ -36,7 +36,6 @@ class VacuumAgent(Agent):
     def __init__(self, ag_id, address_config, component_config):
         super().__init__(ag_id, address_config, component_config)
         self.id = ag_id
-        # communication
         # internal state
         c = self.components
         self.WALLS = c.WALLN + c.WALLE + c.WALLS + c.WALLE
@@ -47,6 +46,11 @@ class VacuumAgent(Agent):
         self.reset_memory()
         # TODO should this be moved to base class?
         self.messenger.default_receiver = "environment"
+
+    def configure(self, config_data):
+        self.MAX_ENERGY = config_data.get('max_energy') or self.MAX_ENERGY
+        self.RECHARGE_THRESHOLD = config_data.get('recharge_threshold') or self.RECHARGE_THRESHOLD
+        self.DEPOSIT_CAPACITY = config_data.get('deposit_capacity') or self.DEPOSIT_CAPACITY
 
     def reset_memory(self):
         self.visited = set()
