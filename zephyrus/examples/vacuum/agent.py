@@ -321,35 +321,31 @@ class VacuumAgent(Agent):
             assert weight != -1
             directions = self._wall_components_to_directions((px, py), self.wall_map[(px, py)])
             for opx, opy in directions:
-                if matrix[opx - minx][opy - miny] > weight + 1:
-                    matrix[opx - minx][opy - miny] = weight + 1
+                tx = opx - minx
+                ty = opy - miny
+                if matrix[tx][ty] > weight + 1:
+                    matrix[tx][ty] = weight + 1
                     queue.append((opx, opy))
-                elif matrix[opx - minx][opy - miny] == -1:
+                elif matrix[tx][ty] == -1:
                     path.append((opx, opy))
                     while weight >= 0:
-                        # Down
-                        if (opx - minx + 1 <= maxx - minx) and (matrix[opx - minx + 1][opy - miny] == weight):
+                        if (tx + 1 <= maxx - minx) and matrix[tx + 1][ty] == weight: # Down
                             path.append((opx + 1, opy))
                             opx += 1
-                            weight -= 1
-                            continue
-                        # West
-                        if (opy - miny - 1 >= 0) and (matrix[opx - minx][opy - 1 - miny] == weight):
+                            tx += 1
+                        elif ty >= 1 and matrix[tx][ty - 1] == weight: # Left
                             path.append((opx, opy - 1))
                             opy -= 1
-                            weight -= 1
-                            continue
-                        # North
-                        if (opx - minx - 1 >= 0) and (matrix[opx - minx - 1][opy - miny] == weight):
+                            ty -= 1
+                        elif tx >= 1 and matrix[tx - 1][ty] == weight: # Up
                             path.append((opx - 1, opy))
-                            weight -= 1
                             opx -= 1
-                            continue
-                        if (opy - miny + 1 <= maxy - miny) and (matrix[opx - minx][opy + 1 - miny] == weight):
+                            tx -= 1
+                        elif (ty + 1 <= maxy - miny) and matrix[tx][ty + 1] == weight: # Right
                             path.append((opx, opy + 1))
-                            weight -= 1
                             opy += 1
-                            continue
+                            ty += 1
+                        weight -= 1
                     return path[::-1]
         logging.error(self.info())
         raise ZephyrusException("Unable to find path")
