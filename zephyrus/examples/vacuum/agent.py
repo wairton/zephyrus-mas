@@ -153,7 +153,7 @@ class VacuumAgent(Agent):
 
     def memorize(self, perceived: ComponentSet):
         if (self.x, self.y) in self.non_visited:
-            self.non_visited.remove((self.x,self.y))
+            self.non_visited.remove((self.x, self.y))
         self.wall_map[(self.x, self.y)] = self.get_perceived_wall_info(perceived)
         if self.components.WALLN not in perceived:
             if ((self.x - 1, self.y) not in self.visited) and ((self.x - 1, self.y) not in self.non_visited):
@@ -190,9 +190,9 @@ class VacuumAgent(Agent):
             non_visited.append((Movement.LEFT, (0, -1)))
         if len(non_visited) == 0:
             if len(self.non_visited) == 0:
-                return self.tracarPlanoSujeira()
+                return self.devise_clean_plan()
             else:
-                return self.tracarPlanoExploracao()
+                return self.devise_exploration_plan()
         chosen_movement, chosen_delta = choice(non_visited)
         # TODO I don't think thats the right place to decrease energy
         # maybe we should move this to after the action's confirmation
@@ -259,41 +259,41 @@ class VacuumAgent(Agent):
         self.px, self.py = self.DELTA_POS[self.movement_recover]
         return self.messenger.build_move_message(content=self.movement_recover)
 
-    def tracarPlanoSujeira(self):
+    def devise_clean_plan(self):
         self.plan = Plan.CLEAN
-
         minx, maxx, miny, maxy = self.calculate_dimensions()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
         matrix = [[-1000 for i in range(sizey)] for i in range(sizex)]
-
         for x, y in self.visited:
             matrix[x-minx][y-miny] = 1000
-
-        for x,y in self.trash_points:
+        for x, y in self.trash_points:
             matrix[x - minx][y - miny] = -1
-        caminho = self.shortest_path(matrix, self.x, self.y,minx, maxx,miny, maxy)
-        self.movements = self.path_to_movements(caminho)
+
+        path = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
+        self.movements = self.path_to_movements(path)
         self.movement_recover = self.movements.pop(0)
+        # energy -1 shouldn't be here
         self.energy -= 1
         self.px, self.py = self.DELTA_POS[self.movement_recover]
-        return "mover %s" % self.movement_recover
+        return self.messenger.build_move_message(content=self.movement_recover)
 
-    def tracarPlanoExploracao(self):
+    def devise_exploration_plan(self):
         self.plan = Plan.EXPLORE
         minx, maxx, miny, maxy = self.calculate_dimensions()
         sizex = maxx - minx + 1
         sizey = maxy - miny + 1
         matrix = [[-1 for i in range(sizey)] for i in range(sizex)]
-
         for x, y in self.visited:
             matrix[x-minx][y-miny] = 1000
-        caminho = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
-        self.movements = self.path_to_movements(caminho)
+
+        path = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
+        self.movements = self.path_to_movements(path)
+        # energy -1 shouldn't be here
         self.energy -= 1
         self.movement_recover = self.movements.pop(0)
         self.px, self.py = self.DELTA_POS[self.movement_recover]
-        return "mover %s" % self.movement_recover
+        return self.messenger.build_move_message(content=self.movement_recover)
 
     def calculate_dimensions(self):
         # TODO this code seems inneficient...
