@@ -79,11 +79,11 @@ class VacuumAgent(Agent):
         while True:
             self.socket_send.send_string(str(self.messenger.build_perceive_message()))
             msg = Message.from_string(self.socket_receive.recv_string())
-            if msg.type == 'STOP':
-                break
             action = self.perceive(msg.content)
-            # TODO: handle stop!
             self.socket_send.send_string(str(action))
+            if action.type == 'STOP':
+                self.messenger.build_stop_message(receiver='mediator')
+                break
             feedback = Message.from_string(self.socket_receive.recv_string())
             if feedback.type == 'CONFIRM':
                 if action.type == 'MOVE':
