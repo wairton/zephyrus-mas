@@ -88,7 +88,7 @@ class Tester(BaseTester):
         self.run_config = json.load(open(run_config))
         self.participants = Participants(address_config)
         if component_config is not None:
-            self.components = ComponentManager(component_config).enum
+            self.components = ComponentManager.get_component_enum(component_config)
         self.sockets = {}
 
     def initialize_participant(self, alias, cmd=None):

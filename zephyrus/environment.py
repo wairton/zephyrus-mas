@@ -21,7 +21,7 @@ class Environment(abc.ABC, Process):
         self.participants = Participants(participants_config)
         self._messenger = None
         if components_config is not None:
-            self.components = ComponentManager(components_config).enum
+            self.components = ComponentManager.get_component_enum(components_config)
 
     @property
     def messenger(self):

@@ -31,7 +31,7 @@ class AuxiliaryTester(BaseTester):
         }
         self.participants = Participants(address_config)
         if component_config is not None:
-            self.components = ComponentManager(component_config).enum
+            self.components = ComponentManager.get_component_enum(component_config)
         self.sockets = {}
 
     @property

@@ -25,7 +25,7 @@ class Agent(abc.ABC, Process):
         self._messenger = None
         # internal state
         if component_config is not None:
-            self.components = ComponentManager(component_config).enum
+            self.components = ComponentManager.get_component_enum(component_config)
 
     @property
     def alias(self):
