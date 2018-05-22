@@ -80,15 +80,18 @@ class VacuumAgent(Agent):
             feedback = Message.from_string(self.socket_receive.recv_string())
             if feedback.type == 'CONFIRM':
                 if action.type == 'MOVE':
-                    self.mover()
+                    self.move_action()
                 elif action.type == 'CLEAN':
-                    self.limpar()
+                    self.clean_action()
                 elif action.type == 'RECHARGE':
-                    self.carregar()
+                    self.recharge_action()
                 elif action.type == 'DEPOSIT':
-                    self.depositar()
-            elif feedback.type == 'REJECT' and action.type == 'MOVE':
-                self.colidir()
+                    self.deposit_action()
+            elif feedback.type == 'REJECT':
+                if action.type == 'MOVE':
+                    self.handle_colision()
+                elif action.type == 'CLEAN':
+                    self.handle_clean_failure()
             else:
                 pass
                 # TODO: log invalid message?
@@ -110,7 +113,6 @@ class VacuumAgent(Agent):
                 if len(self.movements) > 0:
                     self.movement_recover = self.movements.pop(0)
                     self.px, self.py = self.DELTA_POS[self.movement_recover]
-                    self.energy -= 1
                     return self.messenger.build_move_message(content=self.movement_recover)
                 else:
                     self.plan = Plan.NONE
@@ -119,7 +121,6 @@ class VacuumAgent(Agent):
                 if len(self.movements) > 0:
                     self.movement_recover = self.movements.pop(0)
                     self.px, self.py = self.DELTA_POS[self.movement_recover]
-                    self.energy -= 1
                     return self.messenger.build_move_message(content=self.movement_recover)
                 else:
                     self.nrecharge_points -= 1
@@ -130,7 +131,6 @@ class VacuumAgent(Agent):
                 if len(self.movements) > 0:
                     self.movement_recover = self.movements.pop(0)
                     self.px, self.py = self.DELTA_POS[self.movement_recover]
-                    self.energy -= 1
                     return self.messenger.build_move_message(content=self.movement_recover)
                 else:
                     self.plan = Plan.NONE
@@ -142,11 +142,8 @@ class VacuumAgent(Agent):
         elif self.deposit == self.DEPOSIT_CAPACITY:
             return self.devise_deposit_plan(perceived)
         elif self.components.TRASH in perceived:
-            # consumes energy regardless
-            self.energy -= 3
             return self.messenger.build_clean_message()
         return self.choose_direction(self.get_perceived_wall_info(perceived))
-
 
     def get_perceived_wall_info(self, perceived: ComponentSet) -> ComponentSet:
         return self.WALLS & perceived
@@ -194,9 +191,6 @@ class VacuumAgent(Agent):
             else:
                 return self.devise_exploration_plan()
         chosen_movement, chosen_delta = choice(non_visited)
-        # TODO I don't think thats the right place to decrease energy
-        # maybe we should move this to after the action's confirmation
-        self.energy -= 1
         self.px, self.py = chosen_delta
         self.movement_recover = chosen_movement
         # TODO: thanks to the mainloop refactor, we can now get rid of
@@ -227,8 +221,6 @@ class VacuumAgent(Agent):
         path = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
         self.movements = self.path_to_movements(path)
         self.movement_recover = self.movements.pop(0)
-        # TODO: this -1 shouldn't be here
-        self.energy -= 1
         self.px, self.py = self.DELTA_POS[self.movement_recover]
         return self.messenger.build_move_message(content=self.movement_recover)
 
@@ -254,8 +246,6 @@ class VacuumAgent(Agent):
         path = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
         self.movements = self.path_to_movements(path)
         self.movement_recover = self.movements.pop(0)
-        # energy -1 shouldn't be here
-        self.energy -= 1
         self.px, self.py = self.DELTA_POS[self.movement_recover]
         return self.messenger.build_move_message(content=self.movement_recover)
 
@@ -273,8 +263,6 @@ class VacuumAgent(Agent):
         path = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
         self.movements = self.path_to_movements(path)
         self.movement_recover = self.movements.pop(0)
-        # energy -1 shouldn't be here
-        self.energy -= 1
         self.px, self.py = self.DELTA_POS[self.movement_recover]
         return self.messenger.build_move_message(content=self.movement_recover)
 
@@ -289,8 +277,6 @@ class VacuumAgent(Agent):
 
         path = self.shortest_path(matrix, self.x, self.y, minx, maxx, miny, maxy)
         self.movements = self.path_to_movements(path)
-        # energy -1 shouldn't be here
-        self.energy -= 1
         self.movement_recover = self.movements.pop(0)
         self.px, self.py = self.DELTA_POS[self.movement_recover]
         return self.messenger.build_move_message(content=self.movement_recover)
@@ -380,37 +366,30 @@ class VacuumAgent(Agent):
             orix, oriy = desx, desy
         return movements
 
-    def limpar(self):
-        #O agente executa a ação de limpar em sua posição atual.
+    def clean_action(self):
         self.trash_points.discard((self.x, self.y))
+        self.energy -= 3
         self.deposit += 1
 
-    def carregar(self):
+    def recharge_action(self):
         self.energy += 10
 
-    def depositar(self):
+    def deposit_action(self):
         self.energy -= 1
         self.deposit = 0
 
-    def parar(self):
-        #O agente permanece parado e apenas informa esse fato ao observador.
-        self.info()
-        while True:
-            pass
-
-    def mover(self):
-        #movemento realizado com sucesso
+    def move_action(self):
+        self.energy -= 1
         self.x += self.px
         self.y += self.py
 
-    def colidir(self):
-        logging.debug('colidi')
+    def handle_colision(self):
         self.energy -= 1
         if self.plan != None:
             self.movements.insert(0, self.movement_recover)
 
-    def nop(self):
-        pass
+    def handle_clean_failure(self):
+        self.energy -= 3
 
     def info(self):
         info = []
@@ -428,5 +407,5 @@ class VacuumAgent(Agent):
 
 
 if __name__ == '__main__':
-    agente = VacuumAgent(1, *sys.argv[1:])
-    agente.start()
+    agent = VacuumAgent(1, *sys.argv[1:])
+    agent.start()
