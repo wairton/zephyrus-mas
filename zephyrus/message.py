@@ -66,3 +66,6 @@ class Messenger(metaclass=MessengerMeta):
     def __init__(self, sender: str, default_receiver: str = None):
         self.sender = sender
         self.default_receiver = default_receiver
+
+    def build_message(self, receiver, message_type, content):
+        return Message(self.sender, receiver, message_type=message_type.upper(), content=content)
