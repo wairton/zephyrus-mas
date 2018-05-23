@@ -91,6 +91,8 @@ class VacuumAgent(Agent):
             self.socket_send.send_string(str(self.messenger.build_perceive_message()))
             msg = Message.from_string(self.socket_receive.recv_string())
             action = self.perceive(msg.content)
+            # print(action.type, action.content, msg.content)
+            # print(self.info())
             self.socket_send.send_string(str(action))
             if action.type == 'STOP':
                 self.messenger.build_stop_message(receiver='mediator')
@@ -249,7 +251,7 @@ class VacuumAgent(Agent):
 
         if self.components.BIN in perceived:
             self.movements = []
-            self.plan = None
+            self.plan = Plan.NONE
             return self.messenger.build_deposit_message()
 
         self.plan = Plan.DEPOSIT
@@ -404,7 +406,7 @@ class VacuumAgent(Agent):
 
     def handle_colision(self):
         self.energy -= 1
-        if self.plan is not None:
+        if self.plan != Plan.NONE:
             self.movements.insert(0, self.movement_recover)
 
     def handle_clean_failure(self):
