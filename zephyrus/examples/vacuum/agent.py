@@ -11,8 +11,21 @@ from zephyrus.exceptions import ZephyrusException
 from zephyrus.message import Message, Messenger
 
 
+class Movement(enum.Enum):
+    UP = 1
+    RIGHT = 2
+    DOWN = 3
+    LEFT = 4
+
+
 class AgentMessenger(Messenger):
-    basic_messages = ['perceive', 'clean', 'recharge', 'stop', 'move', 'deposit']
+    basic_messages = ['perceive', 'clean', 'recharge', 'stop', 'deposit']
+
+    def build_move_message(self, receiver=None, content=None):
+        receiver = receiver or self.default_receiver
+        if type(content) is Movement:
+            content = content.value
+        return self.build_message(receiver, 'MOVE', content)
 
 
 class Plan(enum.Enum):
@@ -23,13 +36,6 @@ class Plan(enum.Enum):
     RECHARGE = 4
 
 
-class Movement(enum.Enum):
-    UP = 1
-    RIGHT = 2
-    DOWN = 3
-    LEFT = 4
-
-
 class VacuumAgent(Agent):
     messenger_class = AgentMessenger
 
@@ -38,8 +44,13 @@ class VacuumAgent(Agent):
         self.id = ag_id
         # internal state
         c = self.components
-        self.WALLS = c.WALLN + c.WALLE + c.WALLS + c.WALLE
-        self.DELTA_POS = ((-1, 0), (0, 1), (1, 0), (0, -1))
+        self.FOUR_WALLS = c.WALLN + c.WALLW + c.WALLS + c.WALLE
+        self.DELTA_POS = {
+            Movement.UP: (-1, 0),
+            Movement.RIGHT: (0, 1),
+            Movement.DOWN: (1, 0),
+            Movement.LEFT: (0, -1)
+        }
         self.MAX_ENERGY = 80.0
         self.RECHARGE_THRESHOLD = 0.25
         self.DEPOSIT_CAPACITY = 4
@@ -153,12 +164,13 @@ class VacuumAgent(Agent):
         return self.choose_direction(self.get_perceived_wall_info(perceived))
 
     def get_perceived_wall_info(self, perceived: ComponentSet) -> ComponentSet:
-        return self.WALLS & perceived
+        return self.FOUR_WALLS & perceived
 
     def memorize(self, perceived: ComponentSet):
         if (self.x, self.y) in self.non_visited:
             self.non_visited.remove((self.x, self.y))
         self.wall_map[(self.x, self.y)] = self.get_perceived_wall_info(perceived)
+        self.visited.add((self.x, self.y))
         if self.components.WALLN not in perceived:
             if ((self.x - 1, self.y) not in self.visited) and ((self.x - 1, self.y) not in self.non_visited):
                 self.non_visited.add((self.x - 1, self.y))
@@ -180,7 +192,7 @@ class VacuumAgent(Agent):
 
     def choose_direction(self, walls: ComponentSet):
         has_places_to_explore = len(self.non_visited) > 0 or len(self.trash_points) > 0
-        if walls == self.WALLS or not has_places_to_explore:
+        if walls == self.FOUR_WALLS or not has_places_to_explore:
             return self.messenger.build_stop_message()
         x, y = self.x, self.y
         non_visited = []
@@ -235,7 +247,7 @@ class VacuumAgent(Agent):
         if len(self.trash_bins) == 0:
             return self.choose_direction(self.get_perceived_wall_info(perceived))
 
-        if self.components.DEPOSIT in perceived:
+        if self.components.BIN in perceived:
             self.movements = []
             self.plan = None
             return self.messenger.build_deposit_message()
@@ -404,7 +416,7 @@ class VacuumAgent(Agent):
         info.append(separator)
         info.append('Position: {} {}'.format(self.x, self.y))
         info.append('{} {} {}'.format(self.energy, self.deposit, self.plan))
-        info.append('Visited: {}', self.visited)
+        info.append('Visited: {}'.format(self.visited))
         info.append('Non visited: {}'.format(self.non_visited))
         info.append('Trash bins: {}'.format(self.trash_bins))
         info.append('Recharge points: {}'.format(self.recharge_points))
