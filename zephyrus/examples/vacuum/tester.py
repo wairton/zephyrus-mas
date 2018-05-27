@@ -1,4 +1,7 @@
+import json
+import logging
 import math
+
 from zephyrus.tester import Tester
 
 
@@ -61,7 +64,7 @@ class VaccumTester(Tester):
             obj1 = 60 / steps_rate * collect_rate
         else:
             obj1 = (100 - 40 * (steps_rate - 1)) * collect_rate
-        obj2 = 100.0 * collect_rate * log(1 + (80 - max_consumption) / (80 - min_consumption), 2)
+        obj2 = 100.0 * collect_rate * math.log(1 + (80 - max_consumption) / (80 - min_consumption), 2)
         return obj1, obj2
 
 
