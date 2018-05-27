@@ -13,13 +13,16 @@ class VaccumTester(Tester):
             'scenario': strategy_data,
             'agents': [a for a in self.participants.aliases if a.startswith('agent')]
         }
-        self.messenger.build_config_message(receiver='environment', content=content)
+        return self.messenger.build_config_message(receiver='environment', content=content)
 
     def get_mediator_config(self):
         return {
             'agent': self.participants.address('agent'),
             'environment': self.participants.address('environment')
         }
+
+    def get_agent_config(self):
+        return {}
 
     def get_strategy_config(self):
         return {

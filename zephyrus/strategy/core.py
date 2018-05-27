@@ -26,7 +26,7 @@ class Strategy(abc.ABC, Process):
         self.socket_send = None
         # internal state
         if component_config is not None:
-            self.components = c = ComponentManager(component_config).enum
+            self.components = ComponentManager.get_component_enum(component_config)
 
     @property
     def messenger(self):

@@ -47,6 +47,8 @@ class Mediator(Process):
         self.remove_all_participants()
         logging.debug('Mediator is connecting to all participants')
         for alias, address in self.participants.items():
+            if alias == 'agent':
+                alias = '{}_1'.format(alias)
             self.sockets_participants[alias] = self.context.socket(zmq.PUSH)
             self.sockets_participants[alias].connect(address)
         # time.sleep(0.4) #TODO: check if this is necessary

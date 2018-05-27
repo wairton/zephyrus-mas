@@ -42,7 +42,7 @@ class VaccumEnvironment(Environment):
             logging.debug('Environment: answered {}'.format(reply))
             self.socket_send.send_string(str(reply))
 
-    def slice(bitch, resolution):
+    def slice(self, bitch, resolution):
         result = []
         for i in range(resolution):
             result.append(bitch[i * resolution: (i + 1) * resolution])
@@ -52,8 +52,8 @@ class VaccumEnvironment(Environment):
         self.places = []
         self.agent_positions = {}
         resolution = content['resolution']
-        initial = slice(content['initial'], resolution)
-        scenario = slice(content['scenario'], resolution)
+        initial = self.slice(content['initial'], resolution)
+        scenario = self.slice(content['scenario']['data'], resolution)
         agents = content['agents']
         if len(agents) > 1:
             logging.error("Environment: More than one agent found, this feature isn't implemented yet!")
@@ -65,7 +65,7 @@ class VaccumEnvironment(Environment):
                 row.append(ComponentSet(initial[i][j]) + ComponentSet(scenario[i][j]))
                 # FIXME: This DOESN'T work for multiple agents!!!
                 if self.components.AG in row[-1]:
-                    self.agent_positions[agents[0]] = (i, j)
+                    self.agent_positions["{}_1".format(agents[0])] = (i, j)
             self.places.append(row)
 
     def add_agent(self, agid, x, y):
@@ -114,7 +114,7 @@ class VaccumEnvironment(Environment):
 
     def handle_perceive_action(self, agid):
         x, y = self.agent_positions[agid]
-        return self.confirm_message(agid, self.places[x][y])
+        return self.confirm_message(agid, self.places[x][y].value)
 
     def handle_recharge_action(self, agid):
         x, y = self.agent_positions[agid]

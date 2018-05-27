@@ -198,7 +198,7 @@ class VaccumCleanerNsga2(Nsga2):
 
 class VacuumStrategy(Strategy):
     def __init__(self, main_config, address_config, component_config):
-        super().__init__(address_config)
+        super().__init__(address_config, component_config)
         with open(main_config) as config:
             self.main_config = json.load(config)
 
