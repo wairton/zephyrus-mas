@@ -17,7 +17,7 @@
   },
   "strategy": {
     "crossover_rate": 0.85,
-    "muration_rate": 0.005,
+    "mutation_rate": 0.005,
     "n_generations": 500,
     "population_size": 100
   }
