@@ -7,6 +7,7 @@ import zmq
 
 from zephyrus.addresses import Participants
 from zephyrus.components import ComponentManager
+from zephyrus.exceptions import ZephyrusException
 from zephyrus.message import Message
 
 
