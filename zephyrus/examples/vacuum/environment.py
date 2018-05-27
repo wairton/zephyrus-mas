@@ -45,9 +45,8 @@ class VaccumEnvironment(Environment):
     def slice(bitch, resolution):
         result = []
         for i in range(resolution):
-            result.append(bitch[i * resolution : (i + 1) * resolution])
+            result.append(bitch[i * resolution: (i + 1) * resolution])
         return result
-
 
     def configure(self, content):
         self.places = []
