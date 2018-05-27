@@ -5,7 +5,8 @@ from zephyrus.tester import Tester
 class VaccumTester(Tester):
     def build_environment_config_message(self, strategy_data):
         content = {
-            'initial': ,
+            'initial': self.config['environment']['standard_scenario'],
+            'resolution': self.config['environment']['resolution'],
             'scenario': strategy_data,
             'agents': [a for a in self.participants.aliases if a.startswith('agent')]
         }
@@ -15,6 +16,11 @@ class VaccumTester(Tester):
         return {
             'agent': self.participants.address('agent'),
             'environment': self.participants.address('environment')
+        }
+
+    def get_strategy_config(self):
+        return {
+            'nevaluators': 1
         }
 
     def report_result(self, msg):
@@ -59,7 +65,10 @@ class VaccumTester(Tester):
         return obj1, obj2
 
 
-
 if __name__ == '__main__':
-    t = VacuumTester(*sys.argv[1:])
-    t.start()
+    import sys
+    import os
+    basedir = os.path.dirname(__file__)
+    args = [s if s.startswith("/") else os.path.join(basedir, s) for s in sys.argv[1:]]
+
+    VaccumTester(*args).start()
