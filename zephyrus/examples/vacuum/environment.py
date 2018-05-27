@@ -42,11 +42,19 @@ class VaccumEnvironment(Environment):
             logging.debug('Environment: answered {}'.format(reply))
             self.socket_send.send_string(str(reply))
 
+    def slice(bitch, resolution):
+        result = []
+        for i in range(resolution):
+            result.append(bitch[i * resolution : (i + 1) * resolution])
+        return result
+
+
     def configure(self, content):
         self.places = []
         self.agent_positions = {}
-        initial = content['initial']
-        scenario = content['scenario']
+        resolution = content['resolution']
+        initial = slice(content['initial'], resolution)
+        scenario = slice(content['scenario'], resolution)
         agents = content['agents']
         if len(agents) > 1:
             logging.error("Environment: More than one agent found, this feature isn't implemented yet!")
@@ -155,3 +163,12 @@ class VaccumEnvironment(Environment):
     def draw_to_file(self, filename, mode):
         with open(filename, mode) as log:
             log.write(self.draw())
+
+
+if __name__ == '__main__':
+    import sys
+    import os
+    basedir = os.path.dirname(__file__)
+    args = [s if s.startswith("/") else os.path.join(basedir, s) for s in sys.argv[1:]]
+
+    VaccumEnvironment(*args).start()
