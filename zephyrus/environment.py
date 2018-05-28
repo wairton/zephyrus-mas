@@ -28,7 +28,7 @@ class Environment(abc.ABC, Process):
         if self._messenger is None:
             if self.messenger_class is None:
                 raise ZephyrusException("Calling 'messenger' without defining 'messenger_class'")
-            self._messenger = self.messenger_class('Environment')
+            self._messenger = self.messenger_class('environment')
         return self._messenger
 
     def run(self):

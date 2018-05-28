@@ -8,7 +8,7 @@ from zephyrus.examples.vacuum.agent import Movement
 
 
 class EnvironmentMessenger(Messenger):
-    basic_messages = ['CONFIRM', 'REJECT']
+    basic_messages = ['CONFIRM', 'REJECT', 'STOP']
 
 
 class VaccumEnvironment(Environment):
@@ -35,9 +35,10 @@ class VaccumEnvironment(Environment):
             elif msg.type == 'STOP':
                 reply = self.handle_stop_action(msg.sender)
                 if len(self.agent_positions) == 0:
-                    # TODO
+                    self.socket_send.send_string(str(reply))
+                    stop_message = self.messenger.build_stop_message(receiver='mediator')
+                    self.socket_send.send_string(str(stop_message))
                     break
-                # TODO: como o ambiente para?
             else:
                 logging.error("Environmnent: received an invalid message '{}'".format(msg))
             logging.debug('Environment: answered {}'.format(reply))

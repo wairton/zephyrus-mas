@@ -99,6 +99,8 @@ class Mediator(Process):
             if receiver == 'mediator':
                 # TODO we must made clear the difference between FINISH and STOP
                 if msg.type == 'STOP':
+                    if sender == 'agent_1': # FIXME gambiarra
+                        sender = 'agent'
                     active_participants.remove(sender)
             else:
                 self._log.append(msg_str)

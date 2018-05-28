@@ -2,6 +2,7 @@ import json
 import logging
 import math
 
+from zephyrus.message import Message
 from zephyrus.tester import Tester
 
 
@@ -40,7 +41,7 @@ class VaccumTester(Tester):
         size = resolution * resolution
         n_trash = self.config['environment']['n_trash']
         for item in data:
-            msg = json.loads(item)
+            msg = Message.from_string(item)
             if not msg.sender.startswith('agent'):
                 continue
 

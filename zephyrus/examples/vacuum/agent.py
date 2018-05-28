@@ -94,9 +94,7 @@ class VacuumAgent(Agent):
             # print(action.type, action.content, msg.content)
             # print(self.info())
             self.socket_send.send_string(str(action))
-            if action.type == 'STOP':
-                self.messenger.build_stop_message(receiver='mediator')
-                break
+            logging.debug("Agent: action is {}".format(str(action)))
             feedback = Message.from_string(self.socket_receive.recv_string())
             if feedback.type == 'CONFIRM':
                 if action.type == 'MOVE':
@@ -107,6 +105,10 @@ class VacuumAgent(Agent):
                     self.recharge_action()
                 elif action.type == 'DEPOSIT':
                     self.deposit_action()
+                elif action.type == 'STOP':
+                    stop_message = self.messenger.build_stop_message(receiver='mediator')
+                    self.socket_send.send_string(str(stop_message))
+                    break
             elif feedback.type == 'REJECT':
                 if action.type == 'MOVE':
                     self.handle_colision()
