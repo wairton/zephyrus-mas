@@ -4,6 +4,7 @@ from zephyrus.components import ComponentSet
 from zephyrus.environment import Environment
 from zephyrus.exceptions import ZephyrusException
 from zephyrus.message import Message, Messenger
+from zephyrus.examples.vacuum.agent import Movement
 
 
 class EnvironmentMessenger(Messenger):
@@ -78,26 +79,27 @@ class VaccumEnvironment(Environment):
         self.places[x][y] += self.components.AG
 
     def handle_move_action(self, agid, direction):
+        direction = Movement(direction)
         if agid not in self.agent_positions.keys():
             # TODO: exception and log
             raise ZephyrusException()
         x, y = self.agent_positions[agid]
-        if direction == 0:
+        if direction == Movement.UP:
             if self.components.WALLN in self.places[x][y] or self.components.AG in self.places[x - 1][y]:
                 return self.reject_message(agid)
             self.agent_positions[agid] = x - 1, y
             self.places[x - 1][y] += self.components.AG
-        elif direction == 1:
+        elif direction == Movement.RIGHT:
             if self.components.WALLE in self.places[x][y] or self.components.AG in self.places[x][y + 1]:
                 return self.reject_message(agid)
             self.agent_positions[agid] = x, y + 1
             self.places[x][y + 1] += self.components.AG
-        elif direction == 2:
+        elif direction == Movement.DOWN:
             if self.components.WALLS in self.places[x][y] or self.components.AG in self.places[x + 1][y]:
                 return self.reject_message(agid)
             self.agent_positions[agid] = x + 1, y
             self.places[x + 1][y] += self.components.AG
-        elif direction == 3:
+        elif direction == Movement.LEFT:
             if self.components.WALLW in self.places[x][y] or self.components.AG in self.places[x][y - 1]:
                 return self.reject_message(agid)
             self.agent_positions[agid] = x, y - 1
