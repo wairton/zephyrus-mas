@@ -180,28 +180,28 @@ class Tester(BaseTester):
                 self.stop_participants()
                 break
             elif msg.type == 'EVALUATE':
-                logging.debug('evaluate, lets configure environment')
+                logging.debug('Tester: lets configure environment')
                 environ_config = self.build_environment_config_message(msg.content)
                 self.sockets['environment'].send_string(str(environ_config))
                 # TODO this must work for multiple agents
-                logging.debug('evaluate, lets configure agent')
+                logging.debug('Tester: lets configure agent')
                 self.sockets['agent'].send_string(str(self.build_agent_config_message()))
                 self.sockets['mediator'].send_string(start_message)
                 time.sleep(0.01)
                 self.sockets['environment'].send_string(start_message)
                 self.sockets['agent'].send_string(start_message)
-                logging.debug('evaluate, waiting for mediator\'s answer')
+                logging.debug('Tester: waiting for mediator\'s answer')
                 # a message from mediator is expected
                 msg = self.receive_message()
-                logging.debug('evaluate {}'.format(str(msg)[:10]))
+                logging.debug('Tester evaluate {}'.format(str(msg)[:50]))
                 result = self.evaluate(msg.content)
 
                 # TODO check if the message is from mediator or raise error
                 # TODO evaluate mediators message
-                logging.debug('evaluate, send answer to strategy')
+                logging.debug('Tester: send answer to strategy')
                 result_message = self.messenger.build_result_message(content=result)
                 self.sockets['strategy'].send_string(str(result_message))
-        logging.debug('tester, waiting report...')
+        logging.debug('Tester: waiting report...')
         msg = self.receive_message()
         self.report_result(msg)
 

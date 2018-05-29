@@ -92,6 +92,7 @@ class Mediator(Process):
 
     def mainloop(self):
         active_participants = set(self.participants.keys())
+        logging.debug('Mediator, participants are: {}'.format(self.participants))
         nstarted = 0
         self.msg_buffer = deque()
         while nstarted < len(active_participants):
@@ -99,7 +100,7 @@ class Mediator(Process):
             msg = Message.from_string(msg_str)
             if msg.receiver != 'mediator' or msg.type != 'START':
                 self.msg_buffer.append(msg_str)
-                logging.debug("Buffering message: {}".format(msg_str))
+                logging.debug("Monitor: buffering message '{}'".format(msg_str))
                 # TODO raise error
             else:
                 logging.debug("Monitor: a  participant started")
@@ -123,7 +124,7 @@ class Mediator(Process):
                     active_participants.remove(sender)
             else:
                 self._log.append(msg_str)
-                logging.debug('Mediator, sending it to {}'.format(receiver))
+                logging.debug('Mediator: sending it to {}'.format(receiver))
                 self.sockets_participants[receiver].send_string(msg_str)
         # TODO We must improve this. Think about how badly this scales.
         msg = Message('mediator', 'tester', 'RESULT', self._log)
