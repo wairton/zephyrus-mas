@@ -1,4 +1,5 @@
 import logging
+from collections import deque
 from multiprocessing import Process
 
 import zmq
@@ -83,10 +84,28 @@ class Mediator(Process):
             else:
                 logging.error('Mediator received invalid message {}'.format(str(msg)))
 
+    def get_next_message_string(self):
+        if len(self.msg_buffer) > 0:
+            return self.msg_buffer.popleft()
+        return self.socket_receive.recv_string()
+
+
     def mainloop(self):
         active_participants = set(self.participants.keys())
-        while len(active_participants) > 0:
+        nstarted = 0
+        self.msg_buffer = deque()
+        while nstarted < len(active_participants):
             msg_str = self.socket_receive.recv_string()
+            msg = Message.from_string(msg_str)
+            if msg.receiver != 'mediator' or msg.type != 'START':
+                self.msg_buffer.append(msg_str)
+                logging.debug("Buffering message: {}".format(msg_str))
+                # TODO raise error
+            else:
+                logging.debug("Monitor: a  participant started")
+                nstarted += 1
+        while len(active_participants) > 0:
+            msg_str = self.get_next_message_string()
             logging.debug('Mediator, received {}'.format(msg_str))
             msg = Message.from_string(msg_str)
             sender = msg.sender
