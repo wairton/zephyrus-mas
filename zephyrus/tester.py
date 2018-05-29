@@ -187,12 +187,13 @@ class Tester(BaseTester):
                 logging.debug('evaluate, lets configure agent')
                 self.sockets['agent'].send_string(str(self.build_agent_config_message()))
                 self.sockets['mediator'].send_string(start_message)
-                self.sockets['agent'].send_string(start_message)
+                time.sleep(0.01)
                 self.sockets['environment'].send_string(start_message)
+                self.sockets['agent'].send_string(start_message)
                 logging.debug('evaluate, waiting for mediator\'s answer')
                 # a message from mediator is expected
                 msg = self.receive_message()
-                logging.debug('evaluate {}'.format(str(msg)))
+                logging.debug('evaluate {}'.format(str(msg)[:10]))
                 result = self.evaluate(msg.content)
 
                 # TODO check if the message is from mediator or raise error
