@@ -176,7 +176,8 @@ class VaccumCleanerNsga2(Nsga2):
         for _ in range(self.population_size):
             population.append(self.generate_individual(self.resolution, self.n_trash, self.n_bin, self.n_recharge, self.n_ag))
         if log:
-            VaccumCleanerNsga2.save_population_to_file(population, 'inicial.txt')
+            # TODO: add initial config
+            VaccumCleanerNsga2.save_population_to_file(population, 'inicial.log')
         return population
 
     def generate_population(self, current_population, size):
