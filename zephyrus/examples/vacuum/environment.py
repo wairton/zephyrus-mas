@@ -8,7 +8,7 @@ from zephyrus.examples.vacuum.agent import Movement
 
 
 class EnvironmentMessenger(Messenger):
-    basic_messages = ['CONFIRM', 'REJECT', 'STOP']
+    basic_messages = ['CONFIRM', 'REJECT', 'STOP', 'START']
 
 
 class VaccumEnvironment(Environment):
@@ -19,6 +19,8 @@ class VaccumEnvironment(Environment):
         self.agent_positions = {}
 
     def mainloop(self):
+        start_message = self.messenger.build_start_message(receiver='mediator')
+        self.socket_send.send_string(str(start_message))
         while True:
             msg = Message.from_string(self.socket_receive.recv_string())
             logging.debug('Environment: received {}'.format(msg))

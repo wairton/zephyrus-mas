@@ -19,7 +19,7 @@ class Movement(enum.Enum):
 
 
 class AgentMessenger(Messenger):
-    basic_messages = ['perceive', 'clean', 'recharge', 'stop', 'deposit']
+    basic_messages = ['perceive', 'clean', 'recharge', 'start', 'stop', 'deposit']
 
     def build_move_message(self, receiver=None, content=None):
         receiver = receiver or self.default_receiver
@@ -87,6 +87,8 @@ class VacuumAgent(Agent):
 
     def mainloop(self):
         self.reset_memory()
+        start_message = self.messenger.build_start_message(receiver='mediator')
+        self.socket_send.send_string(str(start_message))
         while True:
             self.socket_send.send_string(str(self.messenger.build_perceive_message()))
             msg = Message.from_string(self.socket_receive.recv_string())
