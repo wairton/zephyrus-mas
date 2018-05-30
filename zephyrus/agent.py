@@ -19,7 +19,7 @@ class Agent(abc.ABC, Process):
         self.id = ag_id
         # communication
         participants = Participants(address_config)
-        self.address = participants.address('agent')
+        self.address = participants.address(self.alias)
         self.mediator_address = participants.address('mediator')
         self.socket_receive = None
         self.socket_send = None

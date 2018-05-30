@@ -1,10 +1,7 @@
 {
-  "simulation": "tcp://127.0.0.1:7000",
-  "strategy": "tcp://127.0.0.1:5000",
-  "tester": "tcp://127.0.0.1:6600",
-  "tester_par": "tcp://127.0.0.1:6601",
-  "tester_est": "tcp://127.0.0.1:6605",
-  "mediator": "tcp://127.0.0.1:6500",
-  "environment": "tcp://127.0.0.1:6000",
-  "agent": "tcp://127.0.0.1:6001"
+  "strategy": "tcp://127.0.0.1:6200",
+  "tester": "tcp://127.0.0.1:6000",
+  "mediator": "tcp://127.0.0.1:6100",
+  "environment": "tcp://127.0.0.1:6101",
+  "agent_1": "tcp://127.0.0.1:6102"
 }

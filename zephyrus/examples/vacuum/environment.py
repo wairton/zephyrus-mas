@@ -69,7 +69,7 @@ class VaccumEnvironment(Environment):
                 row.append(ComponentSet(initial[i][j]) + ComponentSet(scenario[i][j]))
                 # FIXME: This DOESN'T work for multiple agents!!!
                 if self.components.AG in row[-1]:
-                    self.agent_positions["{}_1".format(agents[0])] = (i, j)
+                    self.agent_positions[agents[0]] = (i, j)
             self.places.append(row)
 
     def add_agent(self, agid, x, y):

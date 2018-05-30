@@ -18,7 +18,7 @@ class VaccumTester(Tester):
 
     def get_mediator_config(self):
         return {
-            'agent': self.participants.address('agent'),
+            'agent_1': self.participants.address('agent_1'),
             'environment': self.participants.address('environment')
         }
 
@@ -35,6 +35,7 @@ class VaccumTester(Tester):
         logging.info("Report: {}".format(str(msg)))
 
     def evaluate(self, data):
+        # FIXME: does not work for multiple agents
         energy = min_energy = 80
         collected = steps = 0
         resolution = self.config['environment']['resolution']
@@ -44,7 +45,6 @@ class VaccumTester(Tester):
             msg = Message.from_string(item)
             if not msg.sender.startswith('agent'):
                 continue
-
             if msg.type == 'MOVE':
                 steps += 1
                 energy -= 1
@@ -55,10 +55,9 @@ class VaccumTester(Tester):
                 energy += 10
             elif msg.type == 'DEPOSIT':
                 energy -= 1
-
+            # update min_energy
             if energy < min_energy:
                 min_energy = energy
-
         max_consumption = 80 - min_energy
         collect_rate = collected / n_trash
         # furthest place, back and forth plus plus energy to collect and to deposit

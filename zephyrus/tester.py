@@ -129,11 +129,10 @@ class Tester(BaseTester):
 
     def initialize_participants_centralized(self):
         logging.info("Tester: initializing participants")
-        self.initialize_participant('strategy')
-        self.initialize_participant('mediator')
-        self.initialize_participant('environment')
-        self.initialize_participant('agent')
-        # TODO fix agent initialization
+        for alias in self.participants.aliases:
+            if alias == 'tester':
+                continue
+            self.initialize_participant(alias)
 
     def initialize_participants_distributed(self):
         logging.info("Tester: initializing participants")
@@ -146,9 +145,10 @@ class Tester(BaseTester):
     def stop_participants(self):
         logging.info("Tester: stopping participants")
         stop_message = str(self.messenger.build_stop_message())
-        participants = ['strategy', 'mediator', 'environment', 'agent']
-        for p in participants:
-            self.sockets[p].send_string(stop_message)
+        for alias in self.participants.aliases:
+            if alias == 'tester':
+                continue
+            self.sockets[alias].send_string(stop_message)
 
     def main_loop(self, mode):
         result = None
@@ -180,24 +180,23 @@ class Tester(BaseTester):
                 self.stop_participants()
                 break
             elif msg.type == 'EVALUATE':
+                self.sockets['mediator'].send_string(start_message)
+                time.sleep(.01)
                 logging.debug('Tester: lets configure environment')
                 environ_config = self.build_environment_config_message(msg.content)
                 self.sockets['environment'].send_string(str(environ_config))
-                # TODO this must work for multiple agents
-                logging.debug('Tester: lets configure agent')
-                self.sockets['agent'].send_string(str(self.build_agent_config_message()))
-                self.sockets['mediator'].send_string(start_message)
-                time.sleep(0.01)
                 self.sockets['environment'].send_string(start_message)
-                self.sockets['agent'].send_string(start_message)
+                # TODO this must work for multiple agents
+                logging.debug('Tester: lets configure agent(s)')
+                for agent_alias in self.get_agents_aliases():
+                    self.sockets[agent_alias].send_string(str(self.build_agent_config_message()))
+                    self.sockets[agent_alias].send_string(start_message)
                 logging.debug('Tester: waiting for mediator\'s answer')
-                # a message from mediator is expected
                 msg = self.receive_message()
                 logging.debug('Tester evaluate {}'.format(str(msg)[:50]))
                 result = self.evaluate(msg.content)
 
                 # TODO check if the message is from mediator or raise error
-                # TODO evaluate mediators message
                 logging.debug('Tester: send answer to strategy')
                 result_message = self.messenger.build_result_message(content=result)
                 self.sockets['strategy'].send_string(str(result_message))
@@ -214,7 +213,6 @@ class Tester(BaseTester):
 
     def main_loop_distributed(self):
         """
-        """
         start_message = str(self.messenger.build_start_message())
         stop_message = str(self.messenger.build_stop_message())
 
@@ -222,10 +220,23 @@ class Tester(BaseTester):
         self.sockets['strategy'].send_string(start_message)
 
 
-        available_testers = []
+        available_testers = set()
 
         poller = zmq.Poller()
         poller.register(self.socket_receive)
+
+
+        while True:
+            if len(available_testers) > 0:
+                tester = available_testers.pop()
+                msg = self.receive_message()
+                tester
+                if msg.sender != 'strategy':
+                    # TODO
+                    # we shouldn't been receiving messages from any other sender at this point...
+                    break
+
+
 
         while True:
             logging.debug('waiting message from strategy')
@@ -245,8 +256,9 @@ class Tester(BaseTester):
                 self.sockets['environment'].send_string(str(environ_config))
                 # TODO this must work for multiple agents
                 logging.debug('evaluate, lets configure agent')
-                self.sockets['agent'].send_string(str(self.build_agent_config_message()))
                 self.sockets['mediator'].send_string(start_message)
+                for alias in self.get_agents_aliases():
+                    self.sockets[alias].send_string(str(self.build_agent_config_message()))
                 self.sockets['agent'].send_string(start_message)
                 self.sockets['environment'].send_string(start_message)
                 logging.debug('evaluate, waiting for mediator\'s answer')
@@ -264,6 +276,11 @@ class Tester(BaseTester):
         msg = self.receive_message()
         self.report_result(msg)
         poller.unregister(self.socket_receive)
+        """
+        pass
+
+    def get_agents_aliases(self):
+        return [a for a in self.participants.aliases if a.startswith('agent')]
 
     # TODO: expandir para uma versão com roteiro
     def iniciar_simulacao(self, mode):
