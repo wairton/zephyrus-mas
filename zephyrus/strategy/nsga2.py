@@ -1,3 +1,4 @@
+import time
 import operator
 import sys
 
@@ -114,14 +115,17 @@ class Nsga2(ABC):
         return pop1 + [p for p in pop2 if p.cloned is False]
 
     def main_loop(self):
+        log = open(self.main_log, "a")
+        ti = time.time()
         p = self.generate_initial_population()
+        log.write("initial population {}\n".format(time.time() - ti))
         self.store_population(0, p)
+        log.write("initial population storage {}\n".format(time.time() - ti))
         q = []
         i = 0
         while i < self.max_iterations:
-            log = open(self.main_log, "a")
-            log.write("\nGeneration {}\n".format(i + 1))
-            log.close()
+            ti = time.time()
+            log.write("Generation {}\n".format(i + 1))
             print('\r{} of {}'.format(i + 1, self.max_iterations), end='')
             r = self.merge_populations(p, q)
             fronts = self.fast_non_dominated_sort(r)
@@ -135,5 +139,8 @@ class Nsga2(ABC):
             p = p[:self.population_size]
             q = self.generate_population(p, self.population_size)
             i += 1
+            log.write("processing {}\n".format(time.time() - ti))
             self.store_population(i, p)
+            log.write("total {}\n".format(time.time() - ti))
+        log.close()
         return p
