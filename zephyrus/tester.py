@@ -78,19 +78,6 @@ class BaseTester(ABC, multiprocessing.Process):
     def get_mediator_config(self):
         return None
 
-
-class Tester(BaseTester):
-    messenger_class = TesterMessenger
-
-    def __init__(self, main_config, run_config, address_config, component_config=None):
-        super().__init__()
-        self.config = json.load(open(main_config))
-        self.run_config = json.load(open(run_config))
-        self.participants = Participants(address_config)
-        if component_config is not None:
-            self.components = ComponentManager.get_component_enum(component_config)
-        self.sockets = {}
-
     def initialize_participant(self, alias, cmd=None):
         if '<MANUAL>' not in self.run_config[alias]:
             # TODO add log
@@ -108,6 +95,26 @@ class Tester(BaseTester):
             input('Press ENTER to continue')
         self.sockets[alias] = self.context.socket(zmq.PUSH)
         self.sockets[alias].connect(self.participants.address(alias))
+
+    def get_agents_aliases(self):
+        return [a for a in self.participants.aliases if a.startswith('agent')]
+
+
+class Tester(BaseTester):
+    messenger_class = TesterMessenger
+
+    def __init__(self, main_config, run_config, address_config, component_config=None):
+        super().__init__()
+        self.config = json.load(open(main_config))
+        self.run_config = json.load(open(run_config))
+        self.participants = Participants(address_config)
+        if component_config is not None:
+            self.components = ComponentManager.get_component_enum(component_config)
+        self.sockets = {}
+
+     @property
+     def alias(self):
+        return 'tester'
 
     def run(self):
         logging.info('Tester: running.')
@@ -129,14 +136,13 @@ class Tester(BaseTester):
 
     def initialize_participants_centralized(self):
         logging.info("Tester: initializing participants")
-        for alias in self.participants.aliases:
-            if alias == 'tester':
-                continue
+        for alias in self.run_config.keys():
             self.initialize_participant(alias)
 
     def initialize_participants_distributed(self):
         logging.info("Tester: initializing participants")
         self.initialize_participant('strategy')
+        self.config['auxiliares'].keys()
         for participant in self.participants.aliases:
             if not participant.startswith('tester_'):
                 continue
@@ -145,9 +151,7 @@ class Tester(BaseTester):
     def stop_participants(self):
         logging.info("Tester: stopping participants")
         stop_message = str(self.messenger.build_stop_message())
-        for alias in self.participants.aliases:
-            if alias == 'tester':
-                continue
+        for alias in self.run_config.keys():
             self.sockets[alias].send_string(stop_message)
 
     def main_loop(self, mode):
@@ -168,7 +172,7 @@ class Tester(BaseTester):
         self.sockets['strategy'].send_string(start_message)
         self.sockets['mediator'].send_string(str(self.build_mediator_config_message()))
         while True:
-            logging.debug('waiting message from strategy')
+            logging.debug('Tester: waiting message from strategy')
             msg = self.receive_message()
             logging.debug('Tester received {}'.format(str(msg)))
             if msg.sender != 'strategy':
@@ -198,7 +202,7 @@ class Tester(BaseTester):
 
                 # TODO check if the message is from mediator or raise error
                 logging.debug('Tester: send answer to strategy')
-                result_message = self.messenger.build_result_message(content=result)
+                result_message = self.messenger.build_result_message(receiver='strategy', content=result)
                 self.sockets['strategy'].send_string(str(result_message))
         logging.debug('Tester: waiting report...')
         msg = self.receive_message()
@@ -278,9 +282,6 @@ class Tester(BaseTester):
         poller.unregister(self.socket_receive)
         """
         pass
-
-    def get_agents_aliases(self):
-        return [a for a in self.participants.aliases if a.startswith('agent')]
 
     # TODO: expandir para uma versão com roteiro
     def iniciar_simulacao(self, mode):
