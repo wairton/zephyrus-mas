@@ -12,6 +12,7 @@ from zephyrus.message import Message
 from zephyrus.strategy import Strategy
 from zephyrus.strategy.nsga2 import Nsga2, Solution
 from zephyrus.strategy.utils import SolutionType
+from zephyrus.strategy.objective import Objectives
 
 
 class Gene(enum.Enum):
@@ -31,7 +32,7 @@ class VacuumSolution(Solution):
     def clone(self):
         clone = VacuumSolution(self.type, self.resolution)
         clone.chromossome = self.chromossome[:]
-        clone.objectives = self.objectives[:]
+        clone.objectives = self.objectives.copy()
         clone.type = self.type
         # clone.dominated = self.dominated[:]
         # clone.n_dominated = self.n_dominated
@@ -230,7 +231,7 @@ class VacuumStrategy(Strategy):
         self.socket_send.send_string(str(msg))
         ans = Message.from_string(self.socket_receive.recv_string())
         logging.debug('Received {}'.format(str(ans)))
-        return ans.content
+        return Objectives(ans.content)
 
     def configure(self, content):
         self.nevaluators = content.get('nevaluators', 1)
