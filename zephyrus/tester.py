@@ -5,6 +5,7 @@ import multiprocessing
 import subprocess
 import time
 from abc import ABC, abstractmethod
+from collections import deque
 
 import zmq
 
@@ -112,8 +113,8 @@ class Tester(BaseTester):
             self.components = ComponentManager.get_component_enum(component_config)
         self.sockets = {}
 
-     @property
-     def alias(self):
+    @property
+    def alias(self):
         return 'tester'
 
     def run(self):
@@ -122,19 +123,12 @@ class Tester(BaseTester):
         self.context = zmq.Context()
         self.socket_receive = self.context.socket(zmq.PULL)
         self.socket_receive.bind(self.participants.address('tester'))
-        if mode == Mode.CENTRALIZED:
-            self.initialize_participants_centralized()
-        elif mode == Mode.DISTRIBUTED:
-            self.initialize_participants_distributed()
-        else:
-            msg = "Unknown mode: {}".format(mode)
-            logging.error(msg)
-            raise CoreException(msg)
+        self.initialize_participants()
         self.main_loop(mode)
         logging.debug('Tester: stopping.')
         time.sleep(2)
 
-    def initialize_participants_centralized(self):
+    def initialize_participants(self):
         logging.info("Tester: initializing participants")
         for alias in self.run_config.keys():
             self.initialize_participant(alias)
@@ -160,6 +154,10 @@ class Tester(BaseTester):
             result = self.main_loop_centralized()
         elif mode == Mode.DISTRIBUTED:
             result = self.main_loop_distributed()
+        else:
+            msg = "Unknown mode: {}".format(mode)
+            logging.error(msg)
+            raise CoreException(msg)
         return result
 
     def main_loop_centralized(self):
@@ -208,80 +206,53 @@ class Tester(BaseTester):
         msg = self.receive_message()
         self.report_result(msg)
 
-
     def receive_message_from_poller(self, poller, socket, timeout):
         result = poller.poll(timeout)
         if socket in result:
             return Message.from_string(socket.recv_string())
         return None
 
+    def get_auxiliary_testers_aliases(self):
+        return [a for a in self.run_config.keys() if a.startswith('aux')]
+
     def main_loop_distributed(self):
-        """
         start_message = str(self.messenger.build_start_message())
         stop_message = str(self.messenger.build_stop_message())
 
         self.sockets['strategy'].send_string(str(self.build_strategy_config_message()))
         self.sockets['strategy'].send_string(start_message)
 
-
-        available_testers = set()
-
+        eval_buffer = deque()
+        available_testers = set(self.get_auxiliary_testers_aliases())
+        working_testers = set()
         poller = zmq.Poller()
-        poller.register(self.socket_receive)
+        poller.register(self.socket_receive, zmq.POLLIN)
+        should_stop = False
+        while not should_stop or len(working_testers) > 0:
+            socket = dict(poller.poll(100))
+            if self.socket_receive in poller_request:
+               msg = Message.from_string(self.socket_receive.recv_string())
+               if msg.sender == 'strategy':
+                   if msg.type == 'EVALUATE':
+                       eval_buffer.append(msg)
+                   elif msg.type == 'STOP':
+                       should_stop = True
+                elif msg.sender.startswith('aux'):
+                    working_testers.remove()
+                    available_testers.add()
+                    self.sockets['strategy'].send_string(self.socket_testers.recv_string())
 
-
-        while True:
-            if len(available_testers) > 0:
+            while len(available_testers) > 0 and len(eval_buffer) > 0:
+                msg = eval_buffer.popleft()
+                # handle stop message
                 tester = available_testers.pop()
-                msg = self.receive_message()
-                tester
-                if msg.sender != 'strategy':
-                    # TODO
-                    # we shouldn't been receiving messages from any other sender at this point...
-                    break
-
-
-
-        while True:
-            logging.debug('waiting message from strategy')
-            msg = self.receive_message()
-            logging.debug('Tester received {}'.format(str(msg)))
-            if msg.sender != 'strategy':
-                logging.error('received message from {} instead of strategy'.format(msg.sender))
-                # we shouldn't been receiving messages from any other sender at this point...
-                break
-            if msg.type == 'STOP':
-                logging.debug('stop participants')
-                self.stop_participants()
-                break
-            elif msg.type == 'EVALUATE':
-                logging.debug('evaluate, lets configure environment')
-                environ_config = self.build_environment_config_message(msg.content)
-                self.sockets['environment'].send_string(str(environ_config))
-                # TODO this must work for multiple agents
-                logging.debug('evaluate, lets configure agent')
-                self.sockets['mediator'].send_string(start_message)
-                for alias in self.get_agents_aliases():
-                    self.sockets[alias].send_string(str(self.build_agent_config_message()))
-                self.sockets['agent'].send_string(start_message)
-                self.sockets['environment'].send_string(start_message)
-                logging.debug('evaluate, waiting for mediator\'s answer')
-                # a message from mediator is expected
-                msg = self.receive_message()
-                logging.debug('evaluate {}'.format(str(msg)))
-                result = self.evaluate(msg.content)
-
-                # TODO check if the message is from mediator or raise error
-                # TODO evaluate mediators message
-                logging.debug('evaluate, send answer to strategy')
-                result_message = self.messenger.build_result_message(content=result)
-                self.sockets['strategy'].send_string(str(result_message))
+                working_testers.add(tester)
+                self.socket[tester].send_string(str(msg))
+        self.stop_participants()
         logging.debug('tester, waiting report...')
         msg = self.receive_message()
         self.report_result(msg)
         poller.unregister(self.socket_receive)
-        """
-        pass
 
     # TODO: expandir para uma versão com roteiro
     def iniciar_simulacao(self, mode):
