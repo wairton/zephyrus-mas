@@ -23,7 +23,7 @@ class AuxiliaryTesterMessenger(TesterMessenger):
 class AuxiliaryTester(BaseTester):
     messenger_class = AuxiliaryTesterMessenger
 
-    def __init__(self, aux_id, run_config, address_config, component_config=None):
+    def __init__(self, aux_id, main_config, run_config, address_config, component_config=None):
         super().__init__()
         self.aux_id = aux_id
         self.run_config = json.load(open(run_config))
@@ -66,7 +66,7 @@ class AuxiliaryTester(BaseTester):
 
         self.sockets['mediator'].send_string(str(self.build_mediator_config_message()))
         while True:
-            logging.debug('Auxiliary {}: waiting message from strategy'.format())
+            logging.debug('Auxiliary {}: waiting message from strategy'.format(self.aux_id))
             msg = self.receive_message()
             logging.debug('Auxiliary Tester {}: received {}'.format(self.aux_id, str(msg)))
             if msg.sender != 'tester':

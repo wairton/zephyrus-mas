@@ -251,7 +251,7 @@ class Tester(BaseTester):
                 # handle stop message
                 tester = available_testers.pop()
                 working_testers.add(tester)
-                self.socket[tester].send_string(str(msg))
+                self.sockets[tester].send_string(str(msg))
         self.stop_participants()
         logging.debug('tester, waiting report...')
         msg = self.receive_message()
