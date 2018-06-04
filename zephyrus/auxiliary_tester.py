@@ -26,6 +26,7 @@ class AuxiliaryTester(BaseTester):
     def __init__(self, aux_id, main_config, run_config, address_config, component_config=None):
         super().__init__()
         self.aux_id = aux_id
+        self.config = json.load(open(main_config))
         self.run_config = json.load(open(run_config))
         self.participants = Participants(address_config)
         if component_config is not None:
