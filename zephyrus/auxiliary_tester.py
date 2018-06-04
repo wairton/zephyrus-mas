@@ -102,8 +102,3 @@ class AuxiliaryTester(BaseTester):
                 logging.debug('Auxiliary: send answer to strategy')
                 result_message = self.messenger.build_result_message(receiver='tester', content=result)
                 self.socket_main.send_string(str(result_message))
-
-
-if __name__ == '__main__':
-    t = AuxiliaryTester(*sys.argv[1:])
-    t.start()

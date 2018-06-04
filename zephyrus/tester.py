@@ -234,13 +234,13 @@ class Tester(BaseTester):
         should_stop = False
         while not should_stop or len(working_testers) > 0:
             socket = dict(poller.poll(100))
-            if self.socket_receive in poller_request:
-               msg = Message.from_string(self.socket_receive.recv_string())
-               if msg.sender == 'strategy':
-                   if msg.type == 'EVALUATE':
-                       eval_buffer.append(msg)
-                   elif msg.type == 'STOP':
-                       should_stop = True
+            if self.socket_receive in socket:
+                msg = Message.from_string(self.socket_receive.recv_string())
+                if msg.sender == 'strategy':
+                    if msg.type == 'EVALUATE':
+                        eval_buffer.append(msg)
+                    elif msg.type == 'STOP':
+                        should_stop = True
                 elif msg.sender.startswith('aux'):
                     working_testers.remove(msg.sender)
                     available_testers.add(msg.sender)

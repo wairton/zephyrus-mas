@@ -262,6 +262,7 @@ class VacuumStrategy(Strategy):
             'messenger': self.messenger,
             'main_config': self.main_config,
             'components': self.components,
+            'nworkers': self.nevaluators
         }
         evaluator = Evaluator(**config)
         evaluator.start_consumer()

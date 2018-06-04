@@ -25,8 +25,9 @@ class VaccumTester(Tester):
         return {}
 
     def get_strategy_config(self):
+        aux = self.config.get('auxiliaries')
         return {
-            'nevaluators': 1
+            'nevaluators': len(aux) if aux is not None else 1
         }
 
     def report_result(self, msg):

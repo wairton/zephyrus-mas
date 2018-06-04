@@ -11,7 +11,7 @@ from zephyrus.strategy.objective import LazyObjectives
 
 
 class Evaluator:
-    def __init__(self, main_config, components, messenger, socket_send, socket_receive):
+    def __init__(self, main_config, components, messenger, socket_send, socket_receive, nworkers):
         self.stop_flag = None
         self._evaluation_id = 0
         self.queue = Queue()
@@ -20,6 +20,7 @@ class Evaluator:
         self.socket_send = socket_send
         self.socket_receive = socket_receive
         self.components = components
+        self.nworkers = nworkers
 
     @property
     def evaluation_id(self):
@@ -29,7 +30,7 @@ class Evaluator:
     def start_consumer(self):
         self.stop_flag = Event()
         self.buffer_lock = Lock()
-        self.consumer = Consumer(self.socket_send, self.socket_receive, self.messenger, self.stop_flag, self.buffer_lock, self.queue)
+        self.consumer = Consumer(self.socket_send, self.socket_receive, self.messenger, self.stop_flag, self.buffer_lock, self.queue, self.nworkers)
         self.consumer.start()
         return self.queue
 
@@ -76,7 +77,7 @@ class Consumer(Thread):
     def run(self):
         available = self.nworkers
         working = 0
-        result_poller = zmq.Poll()
+        result_poller = zmq.Poller()
         result_poller.register(self.socket_receive, zmq.POLLIN)
 
         while not self.stop_flag.is_set() or not self.queue.empty():
