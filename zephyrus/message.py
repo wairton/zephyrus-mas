@@ -29,6 +29,10 @@ class Message:
     def sender(self):
         return self.message['sender']
 
+    @sender.setter
+    def sender(self, value):
+        self.message['sender'] = value
+
     @property
     def receiver(self):
         return self.message['receiver']
