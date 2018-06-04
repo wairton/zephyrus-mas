@@ -182,8 +182,8 @@ class Tester(BaseTester):
                 self.stop_participants()
                 break
             elif msg.type == 'EVALUATE':
-                self.sockets['mediator'].send_string(start_message)
                 time.sleep(.01)
+                self.sockets['mediator'].send_string(start_message)
                 logging.debug('Tester: lets configure environment')
                 evaluation_id = msg.content.get('id')
                 environ_config = self.build_environment_config_message(msg.content)
@@ -244,13 +244,15 @@ class Tester(BaseTester):
                 elif msg.sender.startswith('aux'):
                     working_testers.remove(msg.sender)
                     available_testers.add(msg.sender)
-                    self.sockets['strategy'].send_string(self.socket_testers.recv_string())
+                    self.sockets['strategy'].send_string(self.socket_receive.recv_string())
 
             while len(available_testers) > 0 and len(eval_buffer) > 0:
                 msg = eval_buffer.popleft()
                 # handle stop message
                 tester = available_testers.pop()
                 working_testers.add(tester)
+                # TODO
+                msg.sender = 'tester'
                 self.sockets[tester].send_string(str(msg))
         self.stop_participants()
         logging.debug('tester, waiting report...')
