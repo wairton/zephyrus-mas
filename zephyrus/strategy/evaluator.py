@@ -1,10 +1,13 @@
 import logging
+import time
 from queue import Queue, Empty
 from threading import Thread, Event, Lock
 
-from zephyrus.components import ComponentSet, ComponentManager
+import zmq
+
+from zephyrus.components import ComponentSet
 from zephyrus.message import Message
-from zephyrus.strategy.objective import LazyObjectives, Objectives
+from zephyrus.strategy.objective import LazyObjectives
 
 
 class Evaluator:
@@ -26,7 +29,7 @@ class Evaluator:
     def start_consumer(self):
         self.stop_flag = Event()
         self.buffer_lock = Lock()
-        self.consumer = Consumer(self.socket_send, self.socket_receive, self.messenger, self.stop_flag,  self.buffer_lock, self.queue)
+        self.consumer = Consumer(self.socket_send, self.socket_receive, self.messenger, self.stop_flag, self.buffer_lock, self.queue)
         self.consumer.start()
         return self.queue
 
@@ -106,7 +109,7 @@ class Consumer(Thread):
             self.notifiers.clear()
 
     def set_evaluation_notifier(self, evaluation_id):
-        if evaluation_id not self.notifiers:
+        if evaluation_id in self.notifiers:
             raise Exception('Already has a notification for {}'.format(evaluation_id))
         with self.buffer_lock:
             self.notifiers[evaluation_id] = Event()
