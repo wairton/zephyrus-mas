@@ -1,6 +1,5 @@
 import enum
 import logging
-import sys
 from collections import deque
 from itertools import islice
 from random import choice

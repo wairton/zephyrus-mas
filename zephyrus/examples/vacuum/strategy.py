@@ -4,8 +4,6 @@ import logging
 import random
 from itertools import islice
 
-import zmq
-
 from zephyrus.components import ComponentSet
 from zephyrus.exceptions import ZephyrusException
 from zephyrus.message import Message
