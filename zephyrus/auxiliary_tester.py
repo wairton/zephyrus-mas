@@ -81,6 +81,7 @@ class AuxiliaryTester(BaseTester):
                 self.sockets['mediator'].send_string(start_message)
                 time.sleep(.01)
                 logging.debug('Auxiliary: lets configure environment')
+                evaluation_id = msg.content.get('id')
                 environ_config = self.build_environment_config_message(msg.content)
                 self.sockets['environment'].send_string(str(environ_config))
                 self.sockets['environment'].send_string(start_message)
@@ -92,7 +93,10 @@ class AuxiliaryTester(BaseTester):
                 logging.debug('Auxiliary: waiting for mediator\'s answer')
                 msg = self.receive_message()
                 logging.debug('Auxiliary: evaluate {}'.format(str(msg)[:50]))
-                result = self.evaluate(msg.content)
+                result = {
+                    'id': evaluation_id,
+                    'data': self.evaluate(msg.content)
+                }
 
                 # TODO check if the message is from mediator or raise error
                 logging.debug('Auxiliary: send answer to strategy')

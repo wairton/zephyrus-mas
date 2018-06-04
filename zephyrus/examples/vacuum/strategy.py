@@ -231,7 +231,7 @@ class VacuumStrategy(Strategy):
         self.socket_send.send_string(str(msg))
         ans = Message.from_string(self.socket_receive.recv_string())
         logging.debug('Received {}'.format(str(ans)))
-        return Objectives(ans.content)
+        return Objectives(ans.content['data'])
 
     def configure(self, content):
         self.nevaluators = content.get('nevaluators', 1)

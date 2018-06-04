@@ -185,7 +185,9 @@ class Tester(BaseTester):
                 self.sockets['mediator'].send_string(start_message)
                 time.sleep(.01)
                 logging.debug('Tester: lets configure environment')
+                evaluation_id = msg.content.get('id')
                 environ_config = self.build_environment_config_message(msg.content)
+
                 self.sockets['environment'].send_string(str(environ_config))
                 self.sockets['environment'].send_string(start_message)
                 # TODO this must work for multiple agents
@@ -196,8 +198,10 @@ class Tester(BaseTester):
                 logging.debug('Tester: waiting for mediator\'s answer')
                 msg = self.receive_message()
                 logging.debug('Tester evaluate {}'.format(str(msg)[:50]))
-                result = self.evaluate(msg.content)
-
+                result = {
+                    'id': evaluation_id,
+                    'data': self.evaluate(msg.content)
+                }
                 # TODO check if the message is from mediator or raise error
                 logging.debug('Tester: send answer to strategy')
                 result_message = self.messenger.build_result_message(receiver='strategy', content=result)
@@ -238,8 +242,8 @@ class Tester(BaseTester):
                    elif msg.type == 'STOP':
                        should_stop = True
                 elif msg.sender.startswith('aux'):
-                    working_testers.remove()
-                    available_testers.add()
+                    working_testers.remove(msg.sender)
+                    available_testers.add(msg.sender)
                     self.sockets['strategy'].send_string(self.socket_testers.recv_string())
 
             while len(available_testers) > 0 and len(eval_buffer) > 0:
