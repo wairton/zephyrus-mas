@@ -56,8 +56,7 @@ class Strategy(abc.ABC, Process):
                 logging.info("Strategy: stopping.")
                 break
             else:
-                logging.error("Strategy received invalid message")
-                logging.debug(str(msg))
+                logging.error("Strategy received invalid message: {}".format(msg))
 
     @abc.abstractmethod
     def mainloop(self):

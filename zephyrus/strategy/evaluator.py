@@ -38,6 +38,7 @@ class Evaluator:
         if self.stop_flag is None:
             raise RuntimeError("Consumer must be started first")
         self.stop_flag.set()
+        return self.consumer.finish_notifier
 
     def add_task(self, task):
         self.queue.put(task)
@@ -73,6 +74,7 @@ class Consumer(Thread):
         self.notifiers = {}
         self.buffer_lock = buffer_lock
         self.nworkers = nworkers
+        self.finish_notifier = Event()
 
     def run(self):
         available = self.nworkers
@@ -80,8 +82,9 @@ class Consumer(Thread):
         result_poller = zmq.Poller()
         result_poller.register(self.socket_receive, zmq.POLLIN)
         logging.debug('Consumer: running')
+        waiting = 0
 
-        while not self.stop_flag.is_set() or not self.queue.empty():
+        while not self.stop_flag.is_set() or waiting > 0 or not self.queue.empty():
             action = False
             if available > 0:
                 action = True
@@ -94,12 +97,14 @@ class Consumer(Thread):
                     self.socket_send.send_string(str(item))
                     available -= 1
                     working += 1
+                    waiting += 1
             if working > 0:
                 action = True
                 sck = dict(result_poller.poll(100))
                 if self.socket_receive in sck and sck[self.socket_receive] == zmq.POLLIN:
                     ans = Message.from_string(self.socket_receive.recv_string())
                     logging.debug('Consumer: received this {}'.format(str(ans)))
+                    waiting -= 1
                     with self.buffer_lock:
                         working -= 1
                         available += 1
@@ -109,6 +114,7 @@ class Consumer(Thread):
                             self.notifiers[eval_id].set()
             if not action:
                 time.sleep(.1)
+        self.finish_notifier.set()
 
     def clear_buffer(self):
         with self.buffer_lock:
