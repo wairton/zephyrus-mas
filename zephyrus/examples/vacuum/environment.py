@@ -41,8 +41,13 @@ class VaccumEnvironment(Environment):
                     stop_message = self.messenger.build_stop_message(receiver='mediator')
                     self.socket_send.send_string(str(stop_message))
                     break
+            elif msg.type == 'CONFIG':
+                # this handles the case where start arrives before config message
+                self.configure(msg.content)
+                continue
             else:
                 logging.error("Environmnent: received an invalid message '{}'".format(msg))
+
             logging.debug('Environment: answered {}'.format(reply))
             self.socket_send.send_string(str(reply))
 
