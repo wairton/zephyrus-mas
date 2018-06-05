@@ -238,21 +238,23 @@ class VacuumStrategy(Strategy):
         nsga2 = VaccumCleanerNsga2()
         nsga2.configure(**self.build_nsga2_config())
         # FIXME: 1 does not necessarily means single...
-        if self.nevaluators == 1:
+
+        if self.main_config['simulation']['mode'] == 'CENTRALIZED':
             evaluator = None
             nsga2.evaluator = self.evaluator_callback
         else:
             evaluator = self.prepare_evaluator()
             nsga2.evaluator = evaluator.evaluate
         nsga2.main_loop()
+        if evaluator is not None:
+            notifier = evaluator.stop_consumer()
+            notifier.wait()
         self.socket_send.send_string(str(self.messenger.build_stop_message()))
         msg = self.messenger.build_result_message(content={
             'value': 0,
             'solution': 0
         })
         logging.debug('Strategy: sending result {}'.format(str(msg)))
-        if evaluator is not None:
-            evaluator.stop_consumer()
         self.socket_send.send_string(str(msg))
 
     def prepare_evaluator(self):
