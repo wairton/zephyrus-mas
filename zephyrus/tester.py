@@ -244,7 +244,7 @@ class Tester(BaseTester):
                 elif msg.sender.startswith('aux'):
                     working_testers.remove(msg.sender)
                     available_testers.add(msg.sender)
-                    self.sockets['strategy'].send_string(self.socket_receive.recv_string())
+                    self.sockets['strategy'].send_string(str(msg))
 
             while len(available_testers) > 0 and len(eval_buffer) > 0:
                 msg = eval_buffer.popleft()
@@ -254,6 +254,7 @@ class Tester(BaseTester):
                 # TODO
                 msg.sender = 'tester'
                 self.sockets[tester].send_string(str(msg))
+        time.sleep(2)
         self.stop_participants()
         logging.debug('tester, waiting report...')
         msg = self.receive_message()

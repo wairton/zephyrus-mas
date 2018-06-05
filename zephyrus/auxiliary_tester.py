@@ -56,7 +56,7 @@ class AuxiliaryTester(BaseTester):
             self.initialize_participant(alias)
 
     def stop_participants(self):
-        logging.info("Tester: stopping participants")
+        logging.info("Auxiliary Tester: stopping participants")
         stop_message = str(self.messenger.build_stop_message())
         for alias in self.run_config.keys():
             self.sockets[alias].send_string(stop_message)
