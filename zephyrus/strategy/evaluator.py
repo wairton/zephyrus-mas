@@ -79,6 +79,7 @@ class Consumer(Thread):
         working = 0
         result_poller = zmq.Poller()
         result_poller.register(self.socket_receive, zmq.POLLIN)
+        logging.debug('Consumer: running')
 
         while not self.stop_flag.is_set() or not self.queue.empty():
             action = False
@@ -88,19 +89,24 @@ class Consumer(Thread):
                     item = self.queue.get(timeout=.1)
                 except Empty:
                     logging.debug('Consumer: queue is empty')
-                logging.debug('Consumer: send {}'.format(str(item)))
-                self.socket_send.send_string(str(item))
-                available -= 1
-                working += 1
+                else:
+                    logging.debug('Consumer: send {}'.format(str(item)))
+                    self.socket_send.send_string(str(item))
+                    available -= 1
+                    working += 1
             if working > 0:
                 action = True
                 sck = dict(result_poller.poll(100))
                 if self.socket_receive in sck and sck[self.socket_receive] == zmq.POLLIN:
                     ans = Message.from_string(self.socket_receive.recv_string())
+                    logging.debug('Consumer: received this {}'.format(str(ans)))
                     with self.buffer_lock:
                         working -= 1
                         available += 1
-                        self.buffer[ans.content['id']] = ans.content['data']
+                        eval_id = ans.content['id']
+                        self.buffer[eval_id] = ans.content['data']
+                        if eval_id in self.notifiers:
+                            self.notifiers[eval_id].set()
             if not action:
                 time.sleep(.1)
 
@@ -124,6 +130,4 @@ class Consumer(Thread):
         with self.buffer_lock:
             if eval_id in self.buffer:
                 data = self.buffer[eval_id]
-            if eval_id in self.notifiers:
-                self.notifiers.set()
         return data

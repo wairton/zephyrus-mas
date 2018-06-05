@@ -135,6 +135,7 @@ class Nsga2(ABC):
                 p.extend(front)
                 if len(p) >= self.population_size:
                     break
+
             p = sorted(p, key=lambda el: el.distance, reverse=True)
             p = p[:self.population_size]
             q = self.generate_population(p, self.population_size)
