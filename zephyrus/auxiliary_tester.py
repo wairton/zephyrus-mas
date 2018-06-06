@@ -11,6 +11,7 @@ import zmq
 
 from zephyrus.addresses import Participants
 from zephyrus.components import ComponentManager
+from zephyrus.config import load as load_config
 from zephyrus.exceptions import CoreException
 from zephyrus.message import Message
 from zephyrus.tester import BaseTester, TesterMessenger
@@ -26,8 +27,8 @@ class AuxiliaryTester(BaseTester):
     def __init__(self, aux_id, main_config, run_config, address_config, component_config=None):
         super().__init__()
         self.aux_id = aux_id
-        self.config = json.load(open(main_config))
-        self.run_config = json.load(open(run_config))
+        self.config = load_config(main_config)
+        self.run_config = load_config(run_config, self.config['simulation']['variables'])
         self.participants = Participants(address_config)
         if component_config is not None:
             self.components = ComponentManager.get_component_enum(component_config)

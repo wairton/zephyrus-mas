@@ -67,9 +67,4 @@ class VaccumAuxiliaryTester(AuxiliaryTester):
 
 if __name__ == '__main__':
     import sys
-    import os
-    basedir = os.path.dirname(__file__)
-    # oh boy, what a workaround...
-    args = [sys.argv[1]] + [s if s.startswith("/") else os.path.join(basedir, s) for s in sys.argv[2:]]
-
-    VaccumAuxiliaryTester(*args).start()
+    VaccumAuxiliaryTester(*sys.argv[1:]).start()
