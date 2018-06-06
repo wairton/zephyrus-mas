@@ -432,7 +432,4 @@ class VacuumAgent(Agent):
 
 if __name__ == '__main__':
     import sys
-    import os
-    basedir = os.path.dirname(__file__)
-    args = [s if s.startswith("/") else os.path.join(basedir, s) for s in sys.argv[1:]]
-    VacuumAgent(1, *args).start()
+    VacuumAgent(1, *sys.argv[1:]).start()

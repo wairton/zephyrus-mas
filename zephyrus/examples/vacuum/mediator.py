@@ -9,13 +9,4 @@ class VacuumMediator(Mediator):
 
 if __name__ == '__main__':
     import sys
-    import os
-    basedir = os.path.dirname(__file__)
-    config_path = sys.argv[-1]
-    args = []
-    if not config_path.startswith('/'):
-        config_path = os.path.join(basedir, config_path)
-    args.append(config_path)
-    if len(sys.argv) > 2:
-        args.append(sys.argv[1])
-    VacuumMediator(*args).start()
+    VacuumMediator(*sys.argv[1:]).start()
