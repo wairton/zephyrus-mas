@@ -13,7 +13,11 @@
     "population_log": "population.log"
   },
   "simulation": {
-    "mode": "CENTRALIZED"
+    "mode": "CENTRALIZED",
+    "variables": {
+      "PYTHON_PATH": "/home/wairton/.virtualenvs/zephyrusdev/bin/python",
+      "CONFIG_PATH": "/home/wairton/lab/zephyrus-mas/zephyrus/examples/vacuum/config"
+    }
   },
   "strategy": {
     "crossover_rate": 0.85,
