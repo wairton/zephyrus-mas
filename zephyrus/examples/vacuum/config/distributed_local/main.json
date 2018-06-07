@@ -13,6 +13,7 @@
     "population_log": "log/distributed_local/population.log"
   },
   "simulation": {
+    "command": "python tester.py config/distributed_local/main.json config/distributed_local/run.json config/distributed_local/addresses.json config/distributed_local/components.json",
     "mode": "DISTRIBUTED",
     "variables": {
       "PYTHON_PATH": "/home/wairton/.virtualenvs/zephyrusdev/bin/python",

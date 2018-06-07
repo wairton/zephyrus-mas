@@ -15,7 +15,7 @@
     "population_log": "log/centralized_resolution_8/population.log"
   },
   "simulation": {
-    "command": "python tester.py config/distributed_local/main.json config/distributed_local/run.json config/distributed_local/addresses.json config/distributed_local/components.json",
+    "command": "python tester.py config/centralized_resolution_8/main.json config/centralized_resolution_8/run.json config/centralized_resolution_8/addresses.json config/centralized_resolution_8/components.json",
     "mode": "CENTRALIZED",
     "variables": {
       "PYTHON_PATH": "/home/wairton/.virtualenvs/zephyrusdev/bin/python",
