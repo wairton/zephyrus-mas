@@ -8,9 +8,9 @@
     "standard_scenario": [18, 2, 2, 2, 2, 6, 16, 0, 0, 0, 0, 4, 16, 0, 0, 0, 0, 4, 16, 0, 0, 0, 0, 4, 16, 0, 0, 0, 0, 4, 24, 8, 8, 8, 8, 12]
   },
   "log": {
-    "final_population_log": "final_population.log",
-    "main_log": "main.log",
-    "population_log": "population.log"
+    "final_population_log": "log/distributed_local/final_population.log",
+    "main_log": "log/distributed_local/main.log",
+    "population_log": "log/distributed_local/population.log"
   },
   "simulation": {
     "mode": "DISTRIBUTED",
