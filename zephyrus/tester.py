@@ -1,3 +1,4 @@
+import os
 import enum
 import json
 import logging
@@ -94,7 +95,9 @@ class BaseTester(ABC, multiprocessing.Process):
         else:
             address = self.participants.address(alias)
             logging.info('Run {} manually on {}\n'.format(alias, address))
-            input('Press ENTER to continue')
+            # os.system('read -r -p "Press ENTER to continue" key')
+            # input('Press ENTER to continue')
+            os.system('python -m "zephyrus.pause"')
         self.sockets[alias] = self.context.socket(zmq.PUSH)
         self.sockets[alias].connect(self.participants.address(alias))
 
