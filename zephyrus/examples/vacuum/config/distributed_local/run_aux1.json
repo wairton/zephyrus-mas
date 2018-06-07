@@ -1,0 +1,5 @@
+{
+    "mediator": "$PYTHON_PATH -m \"zephyrus.examples.vacuum.mediator\" $CONFIG_PATH/addresses_aux1.json aux_1",
+    "environment": "$PYTHON_PATH -m \"zephyrus.examples.vacuum.environment\" $CONFIG_PATH/addresses_aux1.json $CONFIG_PATH/components.json",
+    "agent_1": "$PYTHON_PATH -m \"zephyrus.examples.vacuum.agent\" $CONFIG_PATH/addresses_aux1.json $CONFIG_PATH/components.json"
+}

@@ -1,0 +1,5 @@
+{
+    "strategy": "$PYTHON_PATH -m \"zephyrus.examples.vacuum.strategy\" $CONFIG_PATH/main.json $CONFIG_PATH/addresses.json $CONFIG_PATH/components.json",
+    "aux_1": "$PYTHON_PATH -m \"zephyrus.examples.vacuum.auxiliary_tester\" 1 $CONFIG_PATH/main.json $CONFIG_PATH/run_aux1.json $CONFIG_PATH/addresses_aux1.json $CONFIG_PATH/components.json",
+    "aux_2": "$PYTHON_PATH -m \"zephyrus.examples.vacuum.auxiliary_tester\" 2 $CONFIG_PATH/main.json $CONFIG_PATH/run_aux2.json $CONFIG_PATH/addresses_aux2.json $CONFIG_PATH/components.json"
+}
