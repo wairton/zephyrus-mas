@@ -1,6 +1,5 @@
-import time
 import operator
-import sys
+import time
 
 from abc import ABC, abstractmethod
 
@@ -44,8 +43,10 @@ class Nsga2(ABC):
         self.main_log = None
         self.population_log = None
 
-    #retorna uma lista de fronts
     def fast_non_dominated_sort(self, population):
+        """
+        Returns a list of fronts
+        """
         fronts = []
         current_front = []
         for individual in population:
@@ -120,7 +121,6 @@ class Nsga2(ABC):
         p = self.generate_initial_population()
         log.write("initial population {}\n".format(time.time() - ti))
         self.store_population(0, p)
-        log.write("initial population storage {}\n".format(time.time() - ti))
         q = []
         i = 0
         while i < self.max_iterations:
@@ -140,7 +140,6 @@ class Nsga2(ABC):
             p = p[:self.population_size]
             q = self.generate_population(p, self.population_size)
             i += 1
-            log.write("processing {}\n".format(time.time() - ti))
             self.store_population(i, p)
             log.write("total {}\n".format(time.time() - ti))
         log.close()
