@@ -1,0 +1,8 @@
+{
+    "strategy": "$PYTHON_PATH -m \"zephyrus.examples.vacuum.strategy\" $CONFIG_PATH/main.json $CONFIG_PATH/addresses.json $CONFIG_PATH/components.json",
+    "aux_1": "<MANUAL>",
+    "aux_2": "<MANUAL>",
+    "aux_3": "<MANUAL>",
+    "aux_4": "<MANUAL>",
+    "aux_5": "<MANUAL>"
+}

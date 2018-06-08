@@ -1,0 +1,53 @@
+{
+  "environment": {
+    "n_agent": 1,
+    "n_bin": 2,
+    "n_recharge": 2,
+    "n_trash": 25,
+    "resolution": 8,
+    "standard_scenario": [
+      18, 2, 2, 2, 2, 2, 2, 6, 16, 0, 0, 0, 0, 0, 0, 4, 16, 0, 0, 0, 0, 0, 0, 4, 16, 0, 0, 0, 0, 0, 0, 4, 16, 0, 0, 0, 0, 0, 0, 4, 16, 0, 0, 0, 0, 0, 0, 4, 16, 0, 0, 0, 0, 0, 0, 4, 24, 8, 8, 8, 8, 8, 8, 12
+    ]
+  },
+  "log": {
+    "final_population_log": "log/distributed_digital_ocean_8/final_population.log",
+    "main_log": "log/distributed_digital_ocean_8/main.log",
+    "population_log": "log/distributed_digital_ocean_8/population.log"
+  },
+  "simulation": {
+    "command": "python tester.py config/distributed_digital_ocean_8/main.json config/distributed_digital_ocean_8/run.json config/distributed_digital_ocean_8/addresses.json config/distributed_digital_ocean_8/components.json",
+    "mode": "DISTRIBUTED",
+    "variables": {
+      "PYTHON_PATH": "/home/zephyrus/env/bin/python",
+      "CONFIG_PATH": "/home/zephyrus/src/zephyrus/examples/vacuum/config/distributed_digital_ocean_8"
+    }
+  },
+  "strategy": {
+    "crossover_rate": 0.85,
+    "mutation_rate": 0.005,
+    "n_generations": 400,
+    "population_size": 100
+  },
+  "auxiliaries":{
+    "aux_1":{
+      "run":"run_aux1.json",
+      "addresses":"addresses_aux1.json"
+    },
+    "aux_2":{
+      "run":"run_aux2.json",
+      "addresses":"addresses_aux2.json"
+    },
+    "aux_3":{
+      "run":"run_aux3.json",
+      "addresses":"addresses_aux3.json"
+    },
+    "aux_4":{
+      "run":"run_aux4.json",
+      "addresses":"addresses_aux4.json"
+    },
+    "aux_5":{
+      "run":"run_aux5.json",
+      "addresses":"addresses_aux5.json"
+    }
+  }
+}
