@@ -13,7 +13,7 @@ class ZDTTester(Tester):
 
     def get_mediator_config(self):
         return {
-            'agent': self.participants.address('agent'),
+            'agent_1': self.participants.address('agent_1'),
             'environment': self.participants.address('environment')
         }
 
@@ -32,8 +32,5 @@ class ZDTTester(Tester):
 
 
 if __name__ == '__main__':
-    import os
     import sys
-    basedir = os.path.dirname(__file__)
-    args = [s if s.startswith("/") else os.path.join(basedir, s) for s in sys.argv[1:]]
-    ZDTTester(*args).start()
+    ZDTTester(*sys.argv[1:]).start()

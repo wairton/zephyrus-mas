@@ -28,11 +28,8 @@ class ZDTEnvironment(Environment):
         self.socket_send.send_string(str(stop_message))
 
     def configure(self, content):
-        self.points = content
+        self.points = content['data']
 
 if __name__ == '__main__':
-    import os
     import sys
-    basedir = os.path.dirname(__file__)
-    args = [s if s.startswith('/') else os.path.join(basedir, s) for s in sys.argv[1:]]
-    ZDTEnvironment(*args).start()
+    ZDTEnvironment(*sys.argv[1:]).start()
