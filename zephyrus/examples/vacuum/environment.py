@@ -7,10 +7,6 @@ from zephyrus.message import Message, Messenger
 from zephyrus.examples.vacuum.agent import Movement
 
 
-class EnvironmentMessenger(Messenger):
-    basic_messages = ['CONFIRM', 'REJECT', 'STOP', 'START']
-
-
 class VaccumEnvironment(Environment):
     messenger_class = EnvironmentMessenger
 

@@ -10,8 +10,12 @@ from zephyrus.components import ComponentManager
 from zephyrus.message import Message
 
 
+class EnvironmentMessenger(Messenger):
+    basic_messages = ['CONFIRM', 'REJECT', 'STOP', 'START']
+
+
 class Environment(abc.ABC, Process):
-    messenger_class = None
+    messenger_class = EnvironmentMessenger
 
     def __init__(self, participants_config, components_config=None):
         super().__init__()
