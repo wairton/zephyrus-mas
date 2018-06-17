@@ -207,7 +207,7 @@ class Tester(BaseTester):
                     'data': self.evaluate(msg.content)
                 }
                 # TODO check if the message is from mediator or raise error
-                logging.debug('Tester: send answer to strategy')
+                logging.debug('Tester: send answer to strategy {}'.format(result))
                 result_message = self.messenger.build_result_message(receiver='strategy', content=result)
                 self.sockets['strategy'].send_string(str(result_message))
         logging.debug('Tester: waiting report...')
