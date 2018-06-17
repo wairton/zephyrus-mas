@@ -7,7 +7,7 @@ import zmq
 
 from zephyrus.addresses import Participants
 from zephyrus.components import ComponentManager
-from zephyrus.message import Message
+from zephyrus.message import Message, Messenger
 
 
 class EnvironmentMessenger(Messenger):
