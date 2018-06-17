@@ -1,6 +1,6 @@
 {
-    "strategy": "/home/wairton/.virtualenvs/zephyrusdev/bin/python -m \"zephyrus.examples.zdt.strategy\" config/addresses.json",
-    "mediator": "/home/wairton/.virtualenvs/zephyrusdev/bin/python -m \"zephyrus.examples.zdt.mediator\" config/addresses.json",
-    "environment": "/home/wairton/.virtualenvs/zephyrusdev/bin/python -m \"zephyrus.examples.zdt.environment\" config/addresses.json",
-    "agent": "/home/wairton/.virtualenvs/zephyrusdev/bin/python -m \"zephyrus.examples.zdt.agent\" config/addresses.json"
+    "strategy": "$PYTHON_PATH -m \"zephyrus.examples.zdt.strategy\" $CONFIG_PATH/addresses.json",
+    "mediator": "$PYTHON_PATH -m \"zephyrus.examples.zdt.mediator\" $CONFIG_PATH/addresses.json",
+    "environment": "$PYTHON_PATH -m \"zephyrus.examples.zdt.environment\" $CONFIG_PATH/addresses.json",
+    "agent_1": "$PYTHON_PATH -m \"zephyrus.examples.zdt.agent\" $CONFIG_PATH/addresses.json"
 }

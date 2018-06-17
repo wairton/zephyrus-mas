@@ -1,5 +1,9 @@
 {
   "simulation": {
-    "mode": "CENTRALIZED"
+    "mode": "CENTRALIZED",
+    "variables": {
+      "PYTHON_PATH": "/home/wairton/.virtualenvs/zephyrusdev/bin/python",
+      "CONFIG_PATH": "/home/wairton/lab/zephyrus-mas/zephyrus/examples/zdt/config/"
+    }
   }
 }
