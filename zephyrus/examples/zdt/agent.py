@@ -9,16 +9,17 @@ from zephyrus.message import Message
 
 class ZDTAgent(Agent):
     def mainloop(self):
-        while True:
-            msg = Message.from_string(self.socket_receive.recv_string())
-            logging.debug("Agent: received {}".format(str(msg)))
-            if msg.type == 'STOP':
-                action = Message("agent", message_type="STOP", receiver="mediator")
-                self.socket_send.send_string(str(action))
-                break
-            else:
-                action = self.perceive(msg.content)
-                self.socket_send.send_string(str(action))
+        start_message = Message("agent", message_type="START", receiver="mediator")
+        self.socket_send.send_string(str(start_message))
+        #
+        perceive_message = Message("agent", message_type="PERCEIVE", receiver="environment")
+        self.socket_send.send_string(str(perceive_message))
+        msg = Message.from_string(self.socket_receive.recv_string())
+        action = self.perceive(msg.content)
+        self.socket_send.send_string(str(action))
+        #
+        stop_message = Message("agent", message_type="STOP", receiver="mediator")
+        self.socket_send.send_string(str(stop_message))
 
     def act(self, perceived):
         f1 = perceived[0]
