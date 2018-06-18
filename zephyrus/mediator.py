@@ -86,6 +86,9 @@ class Mediator(Process):
             return self.msg_buffer.popleft()
         return self.socket_receive.recv_string()
 
+    def configure(self, content):
+        self.participants = content
+        self.connect_to_participants()
 
     def mainloop(self):
         active_participants = set(self.participants.keys())

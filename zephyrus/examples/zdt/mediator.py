@@ -2,9 +2,7 @@ from zephyrus.mediator import Mediator
 
 
 class ZDTMediator(Mediator):
-    def configure(self, content):
-        self.participants = content
-        self.connect_to_participants()
+    pass
 
 
 if __name__ == '__main__':
