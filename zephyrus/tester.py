@@ -264,19 +264,3 @@ class Tester(BaseTester):
         msg = self.receive_message()
         self.report_result(msg)
         poller.unregister(self.socket_receive)
-
-    # TODO: expandir para uma versão com roteiro
-    def iniciar_simulacao(self, mode):
-        # teste = self.socket_receive()
-
-        tinicio = time.time()
-        logging.debug('Teste iniciado às: ', time.strftime("%H:%M:%S", time.localtime()))
-
-        self.configuracao = json.loads(open('configuracao.js').read())
-        self.cenario_padrao = map(int, self._configuracao["cenario_padrao"].split())
-        self.estrategia = self.estrategia_nsga2()
-        self.estrategia.main_loop()
-
-        tfim = time.time()
-        logging.debug('Teste finalizado às: ', time.strftime("%H:%M:%S", time.localtime()))
-        logging.debug("tempo consumido: ", str(tfim - tinicio) + 's')
